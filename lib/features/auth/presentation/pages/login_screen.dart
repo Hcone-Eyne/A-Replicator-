@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/router/app_router.dart';
+import '../../../../core/router/route_names.dart';
+import '../../../../features/auth/presentation/providers/auth_provider.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -28,6 +31,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AuthState>(authProvider, (prev, next) {
+      if (next.error != null && prev?.error == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error!), backgroundColor: AppColors.error),
+        );
+        ref.read(authProvider.notifier).clearError();
+      }
+    });
+
     final screenWidth = MediaQuery.of(context).size.width;
     final isDesktop = screenWidth >= 768;
 
@@ -84,7 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 48),
                       Text(
-                        'Discover the standard in modern commerce.',
+                        'Discover a simpler way to buy and sell.',
                         style: GoogleFonts.inter(
                           fontSize: 32,
                           fontWeight: FontWeight.w700,
@@ -95,7 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Experience a marketplace built on institutional trust and premium utility. Fast, secure, and designed for professionals.',
+                        'A focused marketplace experience for everyday buying, selling, and shipping.',
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w400,
@@ -215,9 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
-                    onPressed: () {
-                      Navigator.of(context).pushNamed(AppRouter.forgotPassword);
-                    },
+                    onPressed: () => context.pushNamed(RouteNames.nForgotPassword),
                     style: TextButton.styleFrom(
                       padding: EdgeInsets.zero,
                       minimumSize: Size.zero,
@@ -242,13 +252,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 56,
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        Navigator.of(context).pushReplacementNamed(
-                          AppRouter.securityVerification,
-                        );
-                      }
-                    },
+                    onPressed: ref.watch(authProvider).isLoading
+                        ? null
+                        : () async {
+                            if (_formKey.currentState!.validate()) {
+                              final email = _emailController.text.trim();
+                              final password = _passwordController.text;
+                              await ref.read(authProvider.notifier).login(email, password);
+                              if (mounted && ref.read(authProvider).isAuthenticated) {
+                                context.goNamed(RouteNames.nHome);
+                              }
+                            }
+                          },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.onPrimary,
@@ -294,7 +309,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
-                        'OR CONTINUE WITH',
+                        'OR',
                         style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -364,9 +379,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Sign up link
                 Center(
                   child: GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).pushNamed(AppRouter.signUp);
-                    },
+                    onTap: () => context.pushNamed(RouteNames.nSignUp),
                     child: RichText(
                       text: TextSpan(
                         text: "Don't have an account? ",

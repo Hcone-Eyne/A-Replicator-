@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 
@@ -18,7 +19,7 @@ class Error404Screen extends StatelessWidget {
               child: Row(
                 children: [
                   IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                              onPressed: () => context.pop(),
                     icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
                   ),
                   Expanded(
@@ -97,7 +98,7 @@ class Error404Screen extends StatelessWidget {
                         children: [
                           Expanded(
                             child: OutlinedButton(
-                              onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => context.pop(),
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.onSurface,
                                 side: const BorderSide(color: AppColors.outlineVariant),
@@ -119,7 +120,7 @@ class Error404Screen extends StatelessWidget {
                           Expanded(
                             child: ElevatedButton(
                               onPressed: () {
-                                Navigator.of(context).popUntil((route) => route.isFirst);
+                                context.go('/');
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,

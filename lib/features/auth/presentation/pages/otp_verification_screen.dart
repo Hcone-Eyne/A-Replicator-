@@ -1,22 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/router/route_names.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
-class OtpVerificationScreen extends StatefulWidget {
+class OtpVerificationScreen extends ConsumerStatefulWidget {
   const OtpVerificationScreen({super.key});
 
   @override
-  State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
+  ConsumerState<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
 }
 
-class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
+class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   final List<TextEditingController> _controllers =
       List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
   int _resendSeconds = 59;
   bool _resendEnabled = false;
-  bool _isVerifying = false;
 
   @override
   void initState() {
@@ -54,20 +57,28 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   void _onResend() {
     if (_resendEnabled) {
       _startTimer();
-      // TODO: Trigger resend API
+      ref.read(authProvider.notifier).sendOtp('');
     }
   }
 
-  void _onVerify() {
+  Future<void> _onVerify() async {
     final code = _controllers.map((c) => c.text).join();
-    if (code.length == 6) {
-      setState(() => _isVerifying = true);
-      // TODO: Verify OTP
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() => _isVerifying = false);
-        }
-      });
+    if (code.length != 6) return;
+
+    final success = await ref.read(authProvider.notifier).verifyOtp('', code);
+    if (!mounted) return;
+    if (success) {
+      context.goNamed(RouteNames.nSecurityVerification);
+    } else {
+      final error = ref.read(authProvider).error;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error ?? 'Invalid OTP code'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
@@ -88,7 +99,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   children: [
                     const SizedBox(width: 4),
                     IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => context.pop(),
                       icon: const Icon(
                         Icons.arrow_back,
                         color: AppColors.primary,
@@ -274,7 +285,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                         height: 56,
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: _isVerifying ? null : _onVerify,
+                          onPressed: ref.watch(authProvider).isLoading ? null : _onVerify,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: AppColors.onPrimary,
@@ -284,7 +295,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                             elevation: 0,
                             shadowColor: AppColors.primary.withValues(alpha: 0.2),
                           ),
-                          child: _isVerifying
+                          child: ref.watch(authProvider).isLoading
                               ? const SizedBox(
                                   width: 24,
                                   height: 24,

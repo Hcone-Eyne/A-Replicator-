@@ -1,17 +1,43 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/router/app_router.dart';
+import '../../../../core/router/route_names.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../providers/listing_provider.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  String _selectedCategory = '';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(listingProvider.notifier).getListings();
+      ref.read(listingProvider.notifier).getCategories();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final user = ref.watch(currentUserProvider);
+    final listingState = ref.watch(listingProvider);
+    final listings = listingState.filteredListings.valueOrNull ?? [];
+    final location = user?.location.isNotEmpty == true
+        ? user!.location.toUpperCase()
+        : 'YOUR LOCATION';
+
     return SafeArea(
       child: CustomScrollView(
         slivers: [
-          // Header
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -22,7 +48,7 @@ class HomeScreen extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Marketplace',
+                        'Flow',
                         style: GoogleFonts.inter(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
@@ -35,7 +61,7 @@ class HomeScreen extends StatelessWidget {
                               size: 14, color: AppColors.primary),
                           const SizedBox(width: 4),
                           Text(
-                            'NEW YORK, NY',
+                            location,
                             style: GoogleFonts.inter(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
@@ -50,19 +76,23 @@ class HomeScreen extends StatelessWidget {
                   Row(
                     children: [
                       IconButton(
-                        onPressed: () {},
+                        onPressed: () =>
+                            context.pushNamed(RouteNames.nNotifications),
                         icon: const Icon(Icons.notifications_outlined,
                             color: AppColors.onSurface),
                       ),
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryContainer,
-                          shape: BoxShape.circle,
+                      GestureDetector(
+                        onTap: () => context.goNamed(RouteNames.nProfile),
+                        child: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: const BoxDecoration(
+                            color: AppColors.primaryContainer,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.person,
+                              color: AppColors.onPrimary, size: 20),
                         ),
-                        child: const Icon(Icons.person,
-                            color: AppColors.onPrimary, size: 20),
                       ),
                     ],
                   ),
@@ -71,12 +101,11 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
 
-          // Search Bar
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: GestureDetector(
-                onTap: () => Navigator.of(context).pushNamed(AppRouter.searchResults),
+                onTap: () => context.pushNamed(RouteNames.nSearchResults),
                 child: Container(
                   height: 48,
                   decoration: BoxDecoration(
@@ -87,7 +116,8 @@ class HomeScreen extends StatelessWidget {
                   child: Row(
                     children: [
                       const SizedBox(width: 12),
-                      const Icon(Icons.search, color: AppColors.outline, size: 20),
+                      const Icon(Icons.search,
+                          color: AppColors.outline, size: 20),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -105,7 +135,8 @@ class HomeScreen extends StatelessWidget {
                       ),
                       const Padding(
                         padding: EdgeInsets.all(12),
-                        child: Icon(Icons.tune, color: AppColors.outline, size: 20),
+                        child: Icon(Icons.tune,
+                            color: AppColors.outline, size: 20),
                       ),
                     ],
                   ),
@@ -114,23 +145,48 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
 
-          // Category Chips
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Row(
-                children: [
-                  _buildChip('All Items', true),
-                  const SizedBox(width: 8),
-                  _buildChip('Electronics', false),
-                  const SizedBox(width: 8),
-                  _buildChip('Watches', false),
-                ],
+              child: listingState.categories.when(
+                loading: () => const SizedBox(
+                  height: 40,
+                  child: Center(
+                      child: CircularProgressIndicator(
+                          color: AppColors.primary, strokeWidth: 2)),
+                ),
+                error: (_, __) => const SizedBox.shrink(),
+                data: (cats) => SizedBox(
+                  height: 40,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: cats.length + 1,
+                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      if (index == 0) {
+                        final isActive = _selectedCategory.isEmpty;
+                        return _buildChip('All Items', isActive, () {
+                          setState(() => _selectedCategory = '');
+                          ref
+                              .read(listingProvider.notifier)
+                              .filterByCategory('');
+                        });
+                      }
+                      final cat = cats[index - 1];
+                      final isActive = _selectedCategory == cat.name;
+                      return _buildChip(cat.name, isActive, () {
+                        setState(() => _selectedCategory = cat.name);
+                        ref
+                            .read(listingProvider.notifier)
+                            .filterByCategory(cat.name);
+                      });
+                    },
+                  ),
+                ),
               ),
             ),
           ),
 
-          // Hero Banner
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -155,7 +211,7 @@ class HomeScreen extends StatelessWidget {
                           borderRadius: BorderRadius.circular(99),
                         ),
                         child: Text(
-                          'UP TO 40% OFF',
+                          'Featured picks',
                           style: GoogleFonts.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -171,7 +227,7 @@ class HomeScreen extends StatelessWidget {
                         children: [
                           const SizedBox(height: 12),
                           Text(
-                            'Premium Tech',
+                            'Curated listings',
                             style: GoogleFonts.inter(
                               fontSize: 28,
                               fontWeight: FontWeight.w700,
@@ -180,7 +236,7 @@ class HomeScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            'Up to 40% Off',
+                            'New arrivals and popular items',
                             style: GoogleFonts.inter(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -188,19 +244,22 @@ class HomeScreen extends StatelessWidget {
                             ),
                           ),
                           const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              'Shop Now →',
-                              style: GoogleFonts.inter(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primary,
+                          GestureDetector(
+                            onTap: () => context.goNamed(RouteNames.nExplore),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Browse items',
+                                style: GoogleFonts.inter(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.primary,
+                                ),
                               ),
                             ),
                           ),
@@ -213,7 +272,6 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
 
-          // Recommended for You
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
@@ -228,54 +286,76 @@ class HomeScreen extends StatelessWidget {
                       color: AppColors.onSurface,
                     ),
                   ),
-                  Text(
-                    'View all',
+                  GestureDetector(
+                    onTap: () => context.goNamed(RouteNames.nExplore),
+                    child: Text(
+                      'View all',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          listingState.listings.when(
+            loading: () => const SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: 40),
+                child: Center(
+                    child: CircularProgressIndicator(color: AppColors.primary)),
+              ),
+            ),
+            error: (e, _) => SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(40),
+                child: Center(
+                  child: Text(
+                    'Failed to load listings',
                     style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
+                        fontSize: 14, color: AppColors.onSurfaceVariant),
                   ),
-                ],
+                ),
               ),
             ),
+            data: (_) {
+              if (listings.isEmpty) {
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              }
+              final recommended = listings.take(2).toList();
+              return SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < recommended.length; i++) ...[
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => context.pushNamed(
+                              RouteNames.nProductDetails,
+                              pathParameters: {'id': recommended[i].id},
+                            ),
+                            child: _buildProductCard(
+                              recommended[i].title,
+                              '\$${recommended[i].price.toStringAsFixed(0)}',
+                              recommended[i].category,
+                              Icons.laptop_mac,
+                            ),
+                          ),
+                        ),
+                        if (i < recommended.length - 1) const SizedBox(width: 12),
+                      ],
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
 
-          // Product Cards
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(context).pushNamed(AppRouter.productDetails),
-                      child: _buildProductCard(
-                        'MacBook Pro M3',
-                        '\$2,499',
-                        'Premium',
-                        Icons.laptop_mac,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(context).pushNamed(AppRouter.productDetails),
-                      child: _buildProductCard(
-                        'Omega Speedmaster',
-                        '\$5,200',
-                        'Premium',
-                        Icons.watch,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Near You
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
@@ -290,43 +370,14 @@ class HomeScreen extends StatelessWidget {
                       color: AppColors.onSurface,
                     ),
                   ),
-                  Text(
-                    'See Local',
-                    style: GoogleFonts.inter(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // Near You Cards
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(context).pushNamed(AppRouter.productDetails),
-                      child: _buildNearYouCard(
-                        'Midcentury Mo...',
-                        '\$2,800/mo',
-                        Icons.home_outlined,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(context).pushNamed(AppRouter.productDetails),
-                      child: _buildNearYouCard(
-                        'Victorian Gem',
-                        '\$1,950',
-                        Icons.home_outlined,
+                  GestureDetector(
+                    onTap: () => context.goNamed(RouteNames.nExplore),
+                    child: Text(
+                      'See Local',
+                      style: GoogleFonts.inter(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
                       ),
                     ),
                   ),
@@ -335,104 +386,77 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
 
-          // Trending Today
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Trending Today',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.onSurface,
-                    ),
-                  ),
-                  const Icon(Icons.more_horiz, color: AppColors.outline),
-                ],
-              ),
-            ),
-          ),
-
-          // Trending Item
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.outlineVariant),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryContainer,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(Icons.trending_up,
-                          color: AppColors.primary, size: 24),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Gaming PC Sales Up 36%',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.onSurface,
+          listingState.listings.when(
+            loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+            error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+            data: (_) {
+              final nearYou = listings.length > 2
+                  ? listings.sublist(2, listings.length.clamp(2, 4))
+                  : listings;
+              if (nearYou.isEmpty) {
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              }
+              return SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < nearYou.length; i++) ...[
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => context.pushNamed(
+                              RouteNames.nProductDetails,
+                              pathParameters: {'id': nearYou[i].id},
+                            ),
+                            child: _buildNearYouCard(
+                              nearYou[i].title.length > 14
+                                  ? '${nearYou[i].title.substring(0, 14)}...'
+                                  : nearYou[i].title,
+                              '\$${nearYou[i].price.toStringAsFixed(0)}',
+                              Icons.home_outlined,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Buyers are snapping up high-end builds.',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: AppColors.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                        ),
+                        if (i < nearYou.length - 1) const SizedBox(width: 12),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
-            ),
+              );
+            },
           ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 24)),
         ],
       ),
     );
   }
 
-  Widget _buildChip(String label, bool isActive) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: isActive ? AppColors.primary : AppColors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(99),
-        border: isActive ? null : Border.all(color: AppColors.outlineVariant),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: isActive ? AppColors.onPrimary : AppColors.onSurfaceVariant,
+  Widget _buildChip(String label, bool isActive, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? AppColors.primary : AppColors.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(99),
+          border:
+              isActive ? null : Border.all(color: AppColors.outlineVariant),
+        ),
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: isActive ? AppColors.onPrimary : AppColors.onSurfaceVariant,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildProductCard(String title, String price, String badge, IconData icon) {
+  Widget _buildProductCard(
+      String title, String price, String badge, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -456,7 +480,8 @@ class HomeScreen extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.tertiaryContainer,
                   borderRadius: BorderRadius.circular(4),

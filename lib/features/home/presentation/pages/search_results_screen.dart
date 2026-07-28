@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/router/app_router.dart';
+import '../../../../core/router/route_names.dart';
 
 class SearchResultsScreen extends StatefulWidget {
   final String query;
@@ -49,7 +50,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                   children: [
                     const SizedBox(width: 12),
                     IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => context.pop(),
                       icon: const Icon(Icons.arrow_back, size: 20),
                       color: AppColors.onSurface,
                     ),
@@ -111,7 +112,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
                       color: AppColors.onSurfaceVariant,
                     ),
                   ),
-                  Icon(Icons.grid_view, color: AppColors.outline, size: 20),
+                  const Icon(Icons.grid_view, color: AppColors.outline, size: 20),
                 ],
               ),
             ),
@@ -173,7 +174,7 @@ class _SearchResultsScreenState extends State<SearchResultsScreen> {
     required bool isFavorite,
   }) {
     return GestureDetector(
-      onTap: () => Navigator.of(context).pushNamed(AppRouter.productDetails),
+      onTap: () => context.pushNamed(RouteNames.nProductDetails, pathParameters: {'id': '1'}),
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(

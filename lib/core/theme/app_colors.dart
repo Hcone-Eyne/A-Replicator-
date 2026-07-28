@@ -65,4 +65,8 @@ class AppColors {
   // Background
   static const Color background = Color(0xFFF8F9FF);
   static const Color onBackground = Color(0xFF0B1C30);
+
+  // Semantic (alias)
+  static const Color success = Color(0xFF22C55E);
+  static const Color warning = Color(0xFFF59E0B);
 }

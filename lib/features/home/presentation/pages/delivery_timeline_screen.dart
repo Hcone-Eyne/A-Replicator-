@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/router/route_names.dart';
 
 class DeliveryTimelineScreen extends StatelessWidget {
-  const DeliveryTimelineScreen({super.key});
+  const DeliveryTimelineScreen({super.key, this.id});
+
+  final String? id;
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +17,7 @@ class DeliveryTimelineScreen extends StatelessWidget {
         backgroundColor: AppColors.surfaceBright,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back, color: AppColors.primary),
         ),
         title: Text(
@@ -26,7 +30,7 @@ class DeliveryTimelineScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () => context.pushNamed(RouteNames.nNotifications),
             icon: const Icon(Icons.notifications, color: AppColors.primary),
           ),
         ],
@@ -45,7 +49,7 @@ class DeliveryTimelineScreen extends StatelessWidget {
             const SizedBox(height: 32),
 
             // Support Section
-            _buildSupportSection(),
+            _buildSupportSection(context),
           ],
         ),
       ),
@@ -352,7 +356,7 @@ class DeliveryTimelineScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSupportSection() {
+  Widget _buildSupportSection(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -384,7 +388,9 @@ class DeliveryTimelineScreen extends StatelessWidget {
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Support contact coming soon')),
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.onPrimary,

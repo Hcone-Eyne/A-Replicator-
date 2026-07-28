@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/router/app_router.dart';
+import '../../../../core/router/route_names.dart';
+import '../../../../features/auth/presentation/providers/auth_provider.dart';
 
-class SignUpScreen extends StatefulWidget {
+class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
 
   @override
-  State<SignUpScreen> createState() => _SignUpScreenState();
+  ConsumerState<SignUpScreen> createState() => _SignUpScreenState();
 }
 
-class _SignUpScreenState extends State<SignUpScreen> {
+class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -20,7 +23,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
-  bool _showSuccessOverlay = false;
+  final bool _showSuccessOverlay = false;
 
   @override
   void dispose() {
@@ -34,6 +37,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<AuthState>(authProvider, (prev, next) {
+      if (next.error != null && prev?.error == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error!), backgroundColor: AppColors.error),
+        );
+        ref.read(authProvider.notifier).clearError();
+      }
+    });
+
     return Scaffold(
       backgroundColor: AppColors.surface,
       body: Stack(
@@ -51,7 +63,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       children: [
                         const SizedBox(width: 4),
                         IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
+                          onPressed: () => context.pop(),
                           icon: const Icon(
                             Icons.arrow_back,
                             color: AppColors.primary,
@@ -195,6 +207,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                       if (value == null || value.isEmpty) {
                                         return 'Required';
                                       }
+                                      if (value.length < 6) {
+                                        return 'Min 6 characters';
+                                      }
                                       return null;
                                     },
                                   ),
@@ -318,22 +333,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           height: 56,
                           width: double.infinity,
                           child: ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
                               if (_formKey.currentState!.validate() &&
                                   _agreeToTerms) {
-                                setState(() {
-                                  _showSuccessOverlay = true;
-                                });
-                                Future.delayed(const Duration(seconds: 2), () {
-                                  if (mounted) {
-                                    setState(() {
-                                      _showSuccessOverlay = false;
-                                    });
-                                    Navigator.of(context).pushNamed(
-                                      AppRouter.otpVerification,
-                                    );
-                                  }
-                                });
+                                final name = _nameController.text.trim();
+                                final email = _emailController.text.trim();
+                                final password = _passwordController.text;
+                                await ref.read(authProvider.notifier).register(name, email, password);
+                                if (mounted && ref.read(authProvider).isAuthenticated) {
+                                  // ignore: use_build_context_synchronously
+                                  context.goNamed(RouteNames.nHome);
+                                }
                               }
                             },
                             style: ElevatedButton.styleFrom(
@@ -375,11 +385,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         // Footer
                         Center(
                           child: GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).pushReplacementNamed(
-                                AppRouter.login,
-                              );
-                            },
+                            onTap: () => context.goNamed(RouteNames.nLogin),
                             child: RichText(
                               text: TextSpan(
                                 text: 'Already have an account? ',

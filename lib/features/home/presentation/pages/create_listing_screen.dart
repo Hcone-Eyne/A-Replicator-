@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/router/app_router.dart';
+import '../../../../core/router/route_names.dart';
 
 class CreateListingScreen extends StatefulWidget {
   const CreateListingScreen({super.key});
@@ -23,7 +24,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         backgroundColor: AppColors.surfaceBright,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back, color: AppColors.primary),
         ),
         title: Text(
@@ -110,7 +111,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           child: CustomPaint(
             painter: _DashedBorderPainter(color: AppColors.primary),
             child: InkWell(
-              onTap: () => Navigator.of(context).pushNamed(AppRouter.uploadImages),
+              onTap: () => context.pushNamed(RouteNames.nUploadImages),
               borderRadius: BorderRadius.circular(20),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -324,7 +325,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           DropdownMenuItem(value: 'home', child: Text('Home & Garden')),
           DropdownMenuItem(value: 'sports', child: Text('Sports & Outdoors')),
         ],
-        onChanged: (value) {},
+        onChanged: (value) {
+          // TODO: wire category selection to state
+        },
       ),
     );
   }
@@ -512,7 +515,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: () => Navigator.of(context).pushNamed(AppRouter.listingPreview),
+              onPressed: () => context.pushNamed(RouteNames.nListingPreview, pathParameters: {'id': 'new'}),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2563EB),
                 foregroundColor: AppColors.onPrimary,
@@ -536,7 +539,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             width: double.infinity,
             height: 48,
             child: TextButton(
-              onPressed: () {},
+            onPressed: () => context.pop(),
               child: Text(
                 'Save as Draft',
                 style: GoogleFonts.inter(

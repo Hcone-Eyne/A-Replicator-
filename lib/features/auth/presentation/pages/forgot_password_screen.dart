@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 
-class ForgotPasswordScreen extends StatefulWidget {
+class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key});
 
   @override
-  State<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
+class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  bool _isSending = false;
   bool _showToast = false;
+  String? _toastError;
 
   @override
   void dispose() {
@@ -21,24 +24,34 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  void _onSubmit() {
+  Future<void> _onSubmit() async {
     if (_formKey.currentState!.validate()) {
-      setState(() => _isSending = true);
-
-      // Simulate API call
-      Future.delayed(const Duration(milliseconds: 1200), () {
-        if (!mounted) return;
+      final success = await ref.read(authProvider.notifier).resetPassword(
+            _emailController.text.trim(),
+          );
+      if (!mounted) return;
+      if (success) {
         setState(() {
-          _isSending = false;
           _showToast = true;
+          _toastError = null;
         });
-
         Future.delayed(const Duration(seconds: 4), () {
           if (mounted) {
             setState(() => _showToast = false);
           }
         });
-      });
+      } else {
+        final error = ref.read(authProvider).error;
+        setState(() {
+          _showToast = true;
+          _toastError = error;
+        });
+        Future.delayed(const Duration(seconds: 4), () {
+          if (mounted) {
+            setState(() => _showToast = false);
+          }
+        });
+      }
     }
   }
 
@@ -61,7 +74,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       children: [
                         const SizedBox(width: 4),
                         IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
+                          onPressed: () => context.pop(),
                           icon: const Icon(
                             Icons.arrow_back,
                             color: AppColors.primary,
@@ -213,7 +226,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               height: 56,
                               width: double.infinity,
                               child: ElevatedButton(
-                                onPressed: _isSending ? null : _onSubmit,
+                                onPressed: ref.watch(authProvider).isLoading ? null : _onSubmit,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: AppColors.onPrimary,
@@ -224,7 +237,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                   shadowColor:
                                       AppColors.primary.withValues(alpha: 0.05),
                                 ),
-                                child: _isSending
+                                child: ref.watch(authProvider).isLoading
                                     ? const SizedBox(
                                         width: 24,
                                         height: 24,
@@ -266,7 +279,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
                       // Back to Login
                       TextButton.icon(
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () => context.pop(),
                         icon: const Icon(
                           Icons.arrow_back,
                           color: AppColors.primary,
@@ -342,7 +355,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 decoration: BoxDecoration(
-                  color: AppColors.inverseSurface,
+                  color: _toastError != null
+                      ? AppColors.errorContainer
+                      : AppColors.inverseSurface,
                   borderRadius: BorderRadius.circular(99),
                   boxShadow: [
                     BoxShadow(
@@ -354,19 +369,25 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
-                      Icons.check_circle,
-                      color: AppColors.tertiaryFixed,
+                    Icon(
+                      _toastError != null ? Icons.error_outline : Icons.check_circle,
+                      color: _toastError != null
+                          ? AppColors.onErrorContainer
+                          : AppColors.tertiaryFixed,
                       size: 20,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      'Reset link sent successfully.',
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        height: 20 / 14,
-                        color: AppColors.inverseOnSurface,
+                    Flexible(
+                      child: Text(
+                        _toastError ?? 'Reset link sent successfully.',
+                        style: GoogleFonts.inter(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          height: 20 / 14,
+                          color: _toastError != null
+                              ? AppColors.onErrorContainer
+                              : AppColors.inverseOnSurface,
+                        ),
                       ),
                     ),
                   ],

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class ImageGalleryScreen extends StatefulWidget {
-  const ImageGalleryScreen({super.key});
+  const ImageGalleryScreen({super.key, this.id});
+
+  final String? id;
 
   @override
   State<ImageGalleryScreen> createState() => _ImageGalleryScreenState();
@@ -75,7 +78,7 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => context.pop(),
                     icon: const Icon(Icons.arrow_back, color: Colors.white),
                   ),
                   Text(

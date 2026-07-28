@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../auth/presentation/pages/login_screen.dart';
+import 'package:go_router/go_router.dart';
 
-class SplashScreen extends StatefulWidget {
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/router/route_names.dart';
+import '../../../../features/auth/presentation/providers/auth_provider.dart';
+
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with TickerProviderStateMixin {
   late AnimationController _logoController;
   late AnimationController _loadingController;
@@ -27,7 +31,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     _logoController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1800),
+      duration: const Duration(milliseconds: 800),
     );
 
     _logoScale = Tween<double>(begin: 0.85, end: 1.0).animate(
@@ -43,12 +47,12 @@ class _SplashScreenState extends State<SplashScreen>
 
     _loadingController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 1000),
     );
 
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 500),
     );
 
     _fadeTranslateY = Tween<double>(begin: 20.0, end: 0.0).animate(
@@ -63,32 +67,25 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _startAnimations() async {
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 150));
     _logoController.forward();
 
-    await Future.delayed(const Duration(milliseconds: 800));
+    await Future.delayed(const Duration(milliseconds: 400));
     _fadeController.forward();
     _loadingController.repeat();
 
-    await Future.delayed(const Duration(seconds: 3));
-    _navigateToLogin();
+    await Future.delayed(const Duration(milliseconds: 800));
+    _navigateBasedOnAuth();
   }
 
-  void _navigateToLogin() {
+  void _navigateBasedOnAuth() {
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) =>
-            const LoginScreen(),
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(
-            opacity: animation,
-            child: child,
-          );
-        },
-        transitionDuration: const Duration(milliseconds: 800),
-      ),
-    );
+    final authState = ref.read(authProvider);
+    if (authState.isAuthenticated) {
+      context.goNamed(RouteNames.nHome);
+    } else {
+      context.goNamed(RouteNames.nLogin);
+    }
   }
 
   @override
@@ -185,7 +182,7 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           const SizedBox(height: 24),
                           Text(
-                            'Splash Screen Demo',
+                            'Flow',
                             style: GoogleFonts.inter(
                               fontSize: 28,
                               fontWeight: FontWeight.w700,
@@ -195,7 +192,7 @@ class _SplashScreenState extends State<SplashScreen>
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'Buy & Sell with Trust',
+                            'Buy and sell with confidence',
                             style: GoogleFonts.inter(
                               fontSize: 16,
                               fontWeight: FontWeight.w400,

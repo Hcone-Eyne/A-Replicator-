@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 
@@ -10,7 +11,7 @@ class UploadImagesScreen extends StatefulWidget {
 }
 
 class _UploadImagesScreenState extends State<UploadImagesScreen> {
-  double _uploadProgress = 0.65;
+  final double _uploadProgress = 0.65;
   final int _photoCount = 4;
 
   @override
@@ -21,11 +22,11 @@ class _UploadImagesScreenState extends State<UploadImagesScreen> {
         backgroundColor: AppColors.surfaceBright,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back, color: AppColors.primary),
         ),
         title: Text(
-          'Marketplace',
+          'Flow',
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.w700,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 
@@ -18,7 +19,7 @@ class EmptyWishlistScreen extends StatelessWidget {
               child: Row(
                 children: [
                   IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => context.pop(),
                     icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
                   ),
                   Expanded(
@@ -86,7 +87,7 @@ class EmptyWishlistScreen extends StatelessWidget {
                         height: 52,
                         child: ElevatedButton(
                           onPressed: () {
-                            Navigator.of(context).popUntil((route) => route.isFirst);
+                            context.go('/');
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,

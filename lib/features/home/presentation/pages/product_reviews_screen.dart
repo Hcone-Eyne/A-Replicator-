@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class ProductReviewsScreen extends StatefulWidget {
-  const ProductReviewsScreen({super.key});
+  const ProductReviewsScreen({super.key, this.id});
+
+  final String? id;
 
   @override
   State<ProductReviewsScreen> createState() => _ProductReviewsScreenState();
@@ -25,7 +28,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
               child: Row(
                 children: [
                   IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => context.pop(),
                     icon: const Icon(Icons.arrow_back, color: AppColors.onSurface),
                   ),
                   Expanded(
@@ -297,7 +300,7 @@ class _ProductReviewsScreenState extends State<ProductReviewsScreen> {
           const SizedBox(height: 10),
           Row(
             children: [
-              Icon(Icons.thumb_up_outlined, size: 16, color: AppColors.outline),
+              const Icon(Icons.thumb_up_outlined, size: 16, color: AppColors.outline),
               const SizedBox(width: 4),
               Text(
                 'Helpful',

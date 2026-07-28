@@ -1,20 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/router/app_router.dart';
 
-class TrackOrderScreen extends StatelessWidget {
-  const TrackOrderScreen({super.key});
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/router/route_names.dart';
+import '../../../orders/presentation/providers/order_provider.dart';
+import '../../../orders/data/models/order_model.dart';
+
+class TrackOrderScreen extends ConsumerStatefulWidget {
+  const TrackOrderScreen({super.key, this.id});
+
+  final String? id;
+
+  @override
+  ConsumerState<TrackOrderScreen> createState() => _TrackOrderScreenState();
+}
+
+class _TrackOrderScreenState extends ConsumerState<TrackOrderScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(orderProvider.notifier).getOrders();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final order = widget.id != null
+        ? ref.read(orderProvider.notifier).getOrderDetails(widget.id!)
+        : null;
+
     return Scaffold(
       backgroundColor: AppColors.surfaceBright,
       appBar: AppBar(
         backgroundColor: AppColors.surfaceBright,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back, color: AppColors.primary),
         ),
         title: Text(
@@ -27,41 +51,36 @@ class TrackOrderScreen extends StatelessWidget {
         ),
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () => context.pushNamed(RouteNames.nNotifications),
             icon: const Icon(Icons.notifications, color: AppColors.primary),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Hero Order Card
-            _buildHeroOrderCard(),
-            const SizedBox(height: 16),
-
-            // Map Section
-            _buildMapSection(),
-            const SizedBox(height: 16),
-
-            // Delivery Progress Timeline
-            _buildDeliveryProgress(context),
-            const SizedBox(height: 16),
-
-            // Delivery Details
-            _buildDeliveryDetails(),
-            const SizedBox(height: 16),
-
-            // Action Buttons
-            _buildActionButtons(context),
-          ],
-        ),
-      ),
+      body: order == null
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeroOrderCard(order),
+                  const SizedBox(height: 16),
+                  _buildMapSection(),
+                  const SizedBox(height: 16),
+                  _buildDeliveryProgress(context),
+                  const SizedBox(height: 16),
+                  _buildDeliveryDetails(),
+                  const SizedBox(height: 16),
+                  _buildActionButtons(context, order),
+                ],
+              ),
+            ),
     );
   }
 
-  Widget _buildHeroOrderCard() {
+  Widget _buildHeroOrderCard(dynamic order) {
+    final statusLabel = _statusLabel(order.status);
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -86,72 +105,58 @@ class TrackOrderScreen extends StatelessWidget {
               color: AppColors.surfaceContainer,
               border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.2)),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: const Icon(Icons.camera_alt, size: 32, color: AppColors.primary),
-            ),
+            child: const Icon(Icons.camera_alt, size: 32, color: AppColors.primary),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Leica M11 Digital',
-                            style: GoogleFonts.inter(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.onSurface,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Order ID: #MP-882194',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: AppColors.secondary,
-                            ),
-                          ),
-                        ],
+                Text(
+                  order.listingTitle,
+                  style: GoogleFonts.inter(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Order ID: #${order.id}',
+                  style: GoogleFonts.inter(
+                    fontSize: 14,
+                    color: AppColors.secondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.tertiaryContainer,
+                    borderRadius: BorderRadius.circular(99),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppColors.onTertiaryContainer,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.tertiaryContainer,
-                        borderRadius: BorderRadius.circular(99),
+                      const SizedBox(width: 8),
+                      Text(
+                        statusLabel,
+                        style: GoogleFonts.inter(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.onTertiaryContainer,
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: AppColors.onTertiaryContainer,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'In Transit',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.onTertiaryContainer,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -172,7 +177,6 @@ class TrackOrderScreen extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Map placeholder
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -189,7 +193,6 @@ class TrackOrderScreen extends StatelessWidget {
               ],
             ),
           ),
-          // Current Location Overlay
           Positioned(
             bottom: 16,
             left: 16,
@@ -220,7 +223,7 @@ class TrackOrderScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Schwantherh\u00f6he, Munich',
+                          'In Transit',
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
@@ -258,9 +261,7 @@ class TrackOrderScreen extends StatelessWidget {
   }
 
   Widget _buildDeliveryProgress(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.of(context).pushNamed(AppRouter.deliveryTimeline),
-      child: Container(
+    return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.surfaceContainerLowest,
@@ -282,7 +283,7 @@ class TrackOrderScreen extends StatelessWidget {
           _buildTimelineStep(
             icon: Icons.check,
             title: 'Order Confirmed',
-            subtitle: 'May 12, 10:30 AM',
+            subtitle: 'Order placed successfully',
             isCompleted: true,
             isActive: false,
             isLast: false,
@@ -290,7 +291,7 @@ class TrackOrderScreen extends StatelessWidget {
           _buildTimelineStep(
             icon: Icons.check,
             title: 'Shipped from Warehouse',
-            subtitle: 'May 13, 08:15 AM',
+            subtitle: 'Package dispatched',
             isCompleted: true,
             isActive: false,
             isLast: false,
@@ -298,7 +299,7 @@ class TrackOrderScreen extends StatelessWidget {
           _buildTimelineStep(
             icon: Icons.local_shipping,
             title: 'Out for Delivery',
-            subtitle: 'Expected Today, 4:20 PM',
+            subtitle: 'On the way',
             isCompleted: false,
             isActive: true,
             isLast: false,
@@ -312,7 +313,6 @@ class TrackOrderScreen extends StatelessWidget {
             isLast: true,
           ),
         ],
-      ),
       ),
     );
   }
@@ -336,11 +336,9 @@ class TrackOrderScreen extends StatelessWidget {
                 width: 24,
                 height: 24,
                 decoration: BoxDecoration(
-                  color: isCompleted
+                  color: isCompleted || isActive
                       ? AppColors.onTertiaryContainer
-                      : isActive
-                          ? AppColors.onTertiaryContainer
-                          : AppColors.surfaceContainerHigh,
+                      : AppColors.surfaceContainerHigh,
                   shape: BoxShape.circle,
                   boxShadow: isActive
                       ? [
@@ -412,7 +410,6 @@ class TrackOrderScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          // Courier Info
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -442,7 +439,7 @@ class TrackOrderScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Marcus Swift',
+                        'Premium Global',
                         style: GoogleFonts.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -453,107 +450,6 @@ class TrackOrderScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'ETA',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.05,
-                      color: AppColors.secondary,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '4:30 PM',
-                    style: GoogleFonts.inter(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Tracking & Carrier
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.2)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Tracking Number',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.secondary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'LUX-99201-B',
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.onSurface,
-                            ),
-                          ),
-                          const Icon(Icons.content_copy, size: 18, color: AppColors.primary),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.outlineVariant.withValues(alpha: 0.2)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Carrier',
-                        style: GoogleFonts.inter(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.secondary,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Premium Global',
-                        style: GoogleFonts.inter(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.onSurface,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
             ],
           ),
         ],
@@ -561,14 +457,17 @@ class TrackOrderScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, dynamic order) {
     return Column(
       children: [
         SizedBox(
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {},
+            onPressed: () => context.pushNamed(
+              RouteNames.nConversation,
+              pathParameters: {'id': order.sellerId},
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.onPrimary,
@@ -583,7 +482,7 @@ class TrackOrderScreen extends StatelessWidget {
                 const Icon(Icons.chat, size: 20),
                 const SizedBox(width: 8),
                 Text(
-                  'Contact Delivery Partner',
+                  'Contact Seller',
                   style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
@@ -594,38 +493,18 @@ class TrackOrderScreen extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 12),
-        SizedBox(
-          width: double.infinity,
-          height: 56,
-          child: OutlinedButton(
-            onPressed: () {},
-            style: OutlinedButton.styleFrom(
-              backgroundColor: AppColors.secondaryContainer,
-              foregroundColor: AppColors.onSecondaryContainer,
-              side: BorderSide.none,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.storefront, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Contact Seller',
-                  style: GoogleFonts.inter(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.onSecondaryContainer,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ],
     );
+  }
+
+  String _statusLabel(OrderStatus status) {
+    return switch (status) {
+      OrderStatus.pending => 'PENDING',
+      OrderStatus.confirmed => 'CONFIRMED',
+      OrderStatus.shipped => 'SHIPPED',
+      OrderStatus.delivered => 'DELIVERED',
+      OrderStatus.cancelled => 'CANCELLED',
+      OrderStatus.refunded => 'REFUNDED',
+    };
   }
 }

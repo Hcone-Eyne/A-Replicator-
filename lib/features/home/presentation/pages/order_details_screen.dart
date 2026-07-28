@@ -1,20 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/router/app_router.dart';
 
-class OrderDetailsScreen extends StatelessWidget {
-  const OrderDetailsScreen({super.key});
+import '../../../../core/theme/app_colors.dart';
+import '../../../../core/router/route_names.dart';
+import '../../../orders/presentation/providers/order_provider.dart';
+import '../../../orders/data/models/order_model.dart';
+
+class OrderDetailsScreen extends ConsumerStatefulWidget {
+  const OrderDetailsScreen({super.key, this.id});
+
+  final String? id;
+
+  @override
+  ConsumerState<OrderDetailsScreen> createState() => _OrderDetailsScreenState();
+}
+
+class _OrderDetailsScreenState extends ConsumerState<OrderDetailsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(orderProvider.notifier).getOrders();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final order = widget.id != null
+        ? ref.read(orderProvider.notifier).getOrderDetails(widget.id!)
+        : null;
+
     return Scaffold(
       backgroundColor: AppColors.surfaceBright,
       appBar: AppBar(
         backgroundColor: AppColors.surfaceBright,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back, color: AppColors.primary),
         ),
         title: Text(
@@ -26,32 +50,30 @@ class OrderDetailsScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Order Status Card
-            _buildOrderStatusCard(),
-            const SizedBox(height: 16),
-
-            // Product & Logistics Bento Grid
-            _buildProductAndLogisticsGrid(),
-            const SizedBox(height: 16),
-
-            // Payment Summary
-            _buildPaymentSummary(),
-            const SizedBox(height: 16),
-
-            // Action Buttons
-            _buildActionButtons(context),
-          ],
-        ),
-      ),
+      body: order == null
+          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildOrderStatusCard(order),
+                  const SizedBox(height: 16),
+                  _buildProductAndLogisticsGrid(order),
+                  const SizedBox(height: 16),
+                  _buildPaymentSummary(order),
+                  const SizedBox(height: 16),
+                  _buildActionButtons(context, order),
+                ],
+              ),
+            ),
     );
   }
 
-  Widget _buildOrderStatusCard() {
+  Widget _buildOrderStatusCard(dynamic order) {
+    final statusLabel = _statusLabel(order.status);
+    final formattedDate = '${order.createdAt.day}/${order.createdAt.month}/${order.createdAt.year}';
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -85,10 +107,10 @@ class OrderDetailsScreen extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.local_shipping, size: 14, color: AppColors.onTertiaryFixedVariant),
+                        Icon(_statusIcon(order.status), size: 14, color: AppColors.onTertiaryFixedVariant),
                         const SizedBox(width: 4),
                         Text(
-                          'In Transit',
+                          statusLabel,
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -100,7 +122,7 @@ class OrderDetailsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Estimated Delivery: Oct 24, 2023',
+                    'Ordered: $formattedDate',
                     style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.w600,
@@ -109,40 +131,16 @@ class OrderDetailsScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'ARRIVING IN',
-                    style: GoogleFonts.inter(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.05,
-                      color: AppColors.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '3 Days',
-                    style: GoogleFonts.inter(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                ],
-              ),
             ],
           ),
           const SizedBox(height: 16),
-          // Progress Bar
           ClipRRect(
             borderRadius: BorderRadius.circular(99),
-            child: const LinearProgressIndicator(
-              value: 0.66,
+            child: LinearProgressIndicator(
+              value: _progressValue(order.status),
               minHeight: 8,
               backgroundColor: AppColors.surfaceContainer,
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
             ),
           ),
         ],
@@ -150,10 +148,9 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProductAndLogisticsGrid() {
+  Widget _buildProductAndLogisticsGrid(dynamic order) {
     return Column(
       children: [
-        // Product Section
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -196,7 +193,7 @@ class OrderDetailsScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '#TM-88291',
+                      '#${order.id}',
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -206,7 +203,7 @@ class OrderDetailsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Modular Nordic Sofa',
+                      order.listingTitle,
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,
@@ -224,15 +221,13 @@ class OrderDetailsScreen extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Nordic Design Lab',
+                          order.sellerId,
                           style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppColors.onSurface,
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.verified, size: 18, color: AppColors.onTertiaryContainer),
                       ],
                     ),
                   ],
@@ -242,8 +237,6 @@ class OrderDetailsScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 16),
-
-        // Shipping Address & Payment Row
         Row(
           children: [
             Expanded(
@@ -275,7 +268,7 @@ class OrderDetailsScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '241 High St, Brooklyn,\nNY 11201, USA',
+                      order.shippingAddress,
                       style: GoogleFonts.inter(
                         fontSize: 14,
                         color: AppColors.onSurface,
@@ -319,7 +312,7 @@ class OrderDetailsScreen extends StatelessWidget {
                         const Icon(Icons.credit_card, size: 18, color: AppColors.onSurfaceVariant),
                         const SizedBox(width: 8),
                         Text(
-                          'Visa ending in 4242',
+                          order.paymentMethod,
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             color: AppColors.onSurface,
@@ -337,7 +330,7 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPaymentSummary() {
+  Widget _buildPaymentSummary(dynamic order) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -364,11 +357,9 @@ class OrderDetailsScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          _buildSummaryRow('Subtotal', '\$2,450.00'),
+          _buildSummaryRow('Subtotal', '\$${order.price.toStringAsFixed(2)}'),
           const SizedBox(height: 12),
           _buildSummaryRow('Shipping', 'Free', valueColor: AppColors.tertiaryContainer),
-          const SizedBox(height: 12),
-          _buildSummaryRow('Estimated Tax (8.875%)', '\$217.44'),
           const SizedBox(height: 16),
           const Divider(color: AppColors.outlineVariant, height: 1),
           const SizedBox(height: 16),
@@ -384,7 +375,7 @@ class OrderDetailsScreen extends StatelessWidget {
                 ),
               ),
               Text(
-                '\$2,667.44',
+                '\$${order.price.toStringAsFixed(2)}',
                 style: GoogleFonts.inter(
                   fontSize: 28,
                   fontWeight: FontWeight.w700,
@@ -421,16 +412,17 @@ class OrderDetailsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, dynamic order) {
     return Column(
       children: [
         SizedBox(
           width: double.infinity,
           height: 56,
           child: ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pushNamed(AppRouter.trackOrder);
-            },
+            onPressed: () => context.pushNamed(
+              RouteNames.nTrackOrder,
+              pathParameters: {'id': order.id},
+            ),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: AppColors.onPrimary,
@@ -461,7 +453,10 @@ class OrderDetailsScreen extends StatelessWidget {
           width: double.infinity,
           height: 56,
           child: OutlinedButton(
-            onPressed: () {},
+            onPressed: () => context.pushNamed(
+              RouteNames.nConversation,
+              pathParameters: {'id': order.sellerId},
+            ),
             style: OutlinedButton.styleFrom(
               backgroundColor: AppColors.secondaryContainer,
               foregroundColor: AppColors.onSecondaryContainer,
@@ -487,33 +482,40 @@ class OrderDetailsScreen extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 8),
-        SizedBox(
-          width: double.infinity,
-          height: 48,
-          child: TextButton(
-            onPressed: () {
-              Navigator.of(context).pushNamed(AppRouter.invoice);
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.download, size: 18, color: AppColors.primary),
-                const SizedBox(width: 8),
-                Text(
-                  'DOWNLOAD INVOICE',
-                  style: GoogleFonts.inter(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.05,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ],
     );
+  }
+
+  String _statusLabel(OrderStatus status) {
+    return switch (status) {
+      OrderStatus.pending => 'PENDING',
+      OrderStatus.confirmed => 'CONFIRMED',
+      OrderStatus.shipped => 'SHIPPED',
+      OrderStatus.delivered => 'DELIVERED',
+      OrderStatus.cancelled => 'CANCELLED',
+      OrderStatus.refunded => 'REFUNDED',
+    };
+  }
+
+  IconData _statusIcon(OrderStatus status) {
+    return switch (status) {
+      OrderStatus.pending => Icons.inventory_2_outlined,
+      OrderStatus.confirmed => Icons.inventory_2_outlined,
+      OrderStatus.shipped => Icons.local_shipping_outlined,
+      OrderStatus.delivered => Icons.check_circle_outline,
+      OrderStatus.cancelled => Icons.cancel_outlined,
+      OrderStatus.refunded => Icons.replay_outlined,
+    };
+  }
+
+  double _progressValue(OrderStatus status) {
+    return switch (status) {
+      OrderStatus.pending => 0.25,
+      OrderStatus.confirmed => 0.5,
+      OrderStatus.shipped => 0.75,
+      OrderStatus.delivered => 1.0,
+      OrderStatus.cancelled => 0.0,
+      OrderStatus.refunded => 0.0,
+    };
   }
 }

@@ -1,17 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
-import '../../../../core/router/app_router.dart';
+import '../../../../core/router/route_names.dart';
+import '../../../../features/auth/presentation/providers/auth_provider.dart';
 
-class SecurityVerificationScreen extends StatefulWidget {
+class SecurityVerificationScreen extends ConsumerStatefulWidget {
   const SecurityVerificationScreen({super.key});
 
   @override
-  State<SecurityVerificationScreen> createState() =>
+  ConsumerState<SecurityVerificationScreen> createState() =>
       _SecurityVerificationScreenState();
 }
 
-class _SecurityVerificationScreenState extends State<SecurityVerificationScreen>
+class _SecurityVerificationScreenState extends ConsumerState<SecurityVerificationScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _progressController;
   late Animation<double> _progressAnimation;
@@ -130,7 +133,7 @@ class _SecurityVerificationScreenState extends State<SecurityVerificationScreen>
                     value: _currentProgress / 100,
                     minHeight: 8,
                     backgroundColor: AppColors.surfaceContainerHigh,
-                    valueColor: AlwaysStoppedAnimation<Color>(
+                    valueColor: const AlwaysStoppedAnimation<Color>(
                       AppColors.primary,
                     ),
                   ),
@@ -141,7 +144,7 @@ class _SecurityVerificationScreenState extends State<SecurityVerificationScreen>
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.check_circle,
                       color: AppColors.onTertiaryContainer,
                       size: 16,
@@ -175,14 +178,15 @@ class _SecurityVerificationScreenState extends State<SecurityVerificationScreen>
 
               // Security Badges
               if (_isComplete) ...[
-                SizedBox(
-                  height: 56,
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pushReplacementNamed(
-                        AppRouter.mainShell,
-                      );
+                  SizedBox(
+                    height: 56,
+                    width: double.infinity,
+                    child: ElevatedButton(
+                    onPressed: () async {
+                      await ref.read(authProvider.notifier).login('', '');
+                      if (!mounted) return;
+                      // ignore: use_build_context_synchronously
+                      context.goNamed(RouteNames.mainShell);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
@@ -193,7 +197,7 @@ class _SecurityVerificationScreenState extends State<SecurityVerificationScreen>
                       elevation: 0,
                     ),
                     child: Text(
-                      'Enter Marketplace',
+                      'Continue',
                       style: GoogleFonts.inter(
                         fontSize: 20,
                         fontWeight: FontWeight.w600,

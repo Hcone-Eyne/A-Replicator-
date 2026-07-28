@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 
 class InvoiceScreen extends StatelessWidget {
-  const InvoiceScreen({super.key});
+  const InvoiceScreen({super.key, this.id});
+
+  final String? id;
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +16,7 @@ class InvoiceScreen extends StatelessWidget {
         backgroundColor: AppColors.surfaceBright,
         surfaceTintColor: Colors.transparent,
         leading: IconButton(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
           icon: const Icon(Icons.arrow_back, color: AppColors.primary),
         ),
         title: Text(
