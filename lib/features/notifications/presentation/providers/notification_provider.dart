@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_config.dart';
 import '../../data/models/notification_model.dart';
 import '../../data/repositories/notification_repository.dart';
+import '../../data/repositories/notification_repository_remote.dart';
 
 class NotificationState {
   final AsyncValue<List<NotificationModel>> notifications;
@@ -73,6 +75,9 @@ class NotificationNotifier extends StateNotifier<NotificationState> {
 }
 
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
+  if (ApiConfig.useRemoteBackend) {
+    return NotificationRemoteRepository();
+  }
   return MockNotificationRepository();
 });
 

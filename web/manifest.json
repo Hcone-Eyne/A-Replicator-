@@ -1,11 +1,11 @@
 {
-    "name": "flow_app",
-    "short_name": "flow_app",
+    "name": "Flow App",
+    "short_name": "Flow App",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#00236F",
+    "theme_color": "#00236F",
+    "description": "Flow App - a marketplace to buy and sell second-hand items.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -1,17 +1,53 @@
-# flow_app
+# Flow App
 
-A new Flutter project.
+A marketplace mobile app built with Flutter, backed by a FastAPI + MySQL service.
 
-## Getting Started
+## Structure
 
-This project is a starting point for a Flutter application.
+```
+├── lib/                  # Flutter app (Riverpod, GoRouter, freezed models)
+├── backend/              # FastAPI + SQLAlchemy + MySQL API
+│   ├── src/flow_app/     # Application package (api, core, models, utils)
+│   ├── db/               # schema.sql, seed.sql, CSV exports
+│   └── tests/            # Pytest suite
+└── tool/                 # Dart smoke tests against the live API
+```
 
-A few resources to get you started if this is your first Flutter project:
+## Client (Flutter)
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+- **State**: Riverpod (`StateNotifier` + `StateNotifierProvider`)
+- **Navigation**: GoRouter with a 5-tab shell (Home, Explore, Orders, Messages, Profile)
+- **Models**: freezed + json_serializable; generated files are committed
+- **Data**: repositories hit the backend API (`useRemoteBackend` in `lib/core/network/api_config.dart`)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```bash
+flutter pub get
+flutter run -d macos     # or your target device
+```
+
+Verify before committing:
+
+```bash
+flutter analyze
+flutter test
+```
+
+## API (FastAPI)
+
+See [`backend/README.md`](backend/README.md) for setup, endpoints, and commands.
+
+```bash
+cd backend
+brew services start mysql
+python -m flow_app.utils.seed_db
+python3 -m venv .venv && source .venv/bin/activate
+pip install ".[dev]"
+uvicorn flow_app.main:app --reload --port 8000
+```
+
+API docs: http://localhost:8000/docs
+
+## Database
+
+- Source of truth: `backend/db/schema.sql` + `backend/db/seed.sql`
+- Export any table to CSV for sharing: `python -m flow_app.utils.export_csv` (outputs to `backend/db/exports/`)

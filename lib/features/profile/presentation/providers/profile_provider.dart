@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_config.dart';
 import '../../../auth/data/models/user_model.dart';
 import '../../../home/data/models/listing_model.dart';
 import '../../data/models/review_model.dart';
 import '../../data/models/seller_model.dart';
 import '../../data/repositories/profile_repository.dart';
+import '../../data/repositories/profile_repository_remote.dart';
 
 class ProfileState {
   final AsyncValue<UserModel?> userProfile;
@@ -132,6 +134,9 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
 }
 
 final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
+  if (ApiConfig.useRemoteBackend) {
+    return ProfileRemoteRepository();
+  }
   return MockProfileRepository();
 });
 

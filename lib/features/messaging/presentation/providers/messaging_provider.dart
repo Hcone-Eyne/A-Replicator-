@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_config.dart';
 import '../../data/models/conversation_model.dart';
 import '../../data/models/message_model.dart';
 import '../../data/repositories/messaging_repository.dart';
+import '../../data/repositories/messaging_repository_remote.dart';
 
 enum ConversationFilter { all, unread, sellers }
 
@@ -107,6 +109,9 @@ class MessagingNotifier extends StateNotifier<MessagingState> {
 }
 
 final messagingRepositoryProvider = Provider<MessagingRepository>((ref) {
+  if (ApiConfig.useRemoteBackend) {
+    return MessagingRemoteRepository();
+  }
   return MockMessagingRepository();
 });
 

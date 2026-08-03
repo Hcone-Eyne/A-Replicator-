@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_config.dart';
 import '../../data/models/category_model.dart';
 import '../../data/models/listing_model.dart';
 import '../../data/repositories/listing_repository.dart';
+import '../../data/repositories/listing_repository_remote.dart';
 
 class ListingState {
   final AsyncValue<List<ListingModel>> listings;
@@ -143,6 +145,9 @@ class ListingNotifier extends StateNotifier<ListingState> {
 }
 
 final listingRepositoryProvider = Provider<ListingRepository>((ref) {
+  if (ApiConfig.useRemoteBackend) {
+    return ListingRemoteRepository();
+  }
   return MockListingRepository();
 });
 

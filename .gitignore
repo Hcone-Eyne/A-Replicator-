@@ -53,9 +53,15 @@ stitch_screens/*.html
 
 # Flutter metadata
 .metadata
+.last_build_id
 
 # Dev-only docs (not needed in repo)
 fix.md
 solution.md
 work_done.md
 AGENTS.md
+
+# Backend (FastAPI / MySQL)
+backend/.venv/
+backend/.env
+**/__pycache__/

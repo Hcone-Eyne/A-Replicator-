@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_config.dart';
 import '../../data/models/order_model.dart';
 import '../../data/repositories/order_repository.dart';
+import '../../data/repositories/order_repository_remote.dart';
 
 enum OrderTab { all, processing, shipped, delivered }
 
@@ -89,6 +91,9 @@ class OrderNotifier extends StateNotifier<OrderState> {
 }
 
 final orderRepositoryProvider = Provider<OrderRepository>((ref) {
+  if (ApiConfig.useRemoteBackend) {
+    return OrderRemoteRepository();
+  }
   return MockOrderRepository();
 });
 

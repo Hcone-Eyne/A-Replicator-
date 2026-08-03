@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/network/api_config.dart';
 import '../../data/models/user_model.dart';
 import '../../data/repositories/auth_repository.dart';
+import '../../data/repositories/auth_repository_remote.dart';
 
 class AuthState {
   final bool isAuthenticated;
@@ -155,6 +157,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
 }
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  if (ApiConfig.useRemoteBackend) {
+    return AuthRemoteRepository();
+  }
   return MockAuthRepository();
 });
 
