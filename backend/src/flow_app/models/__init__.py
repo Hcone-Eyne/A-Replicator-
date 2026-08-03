@@ -19,7 +19,7 @@ from ..core.database import Base
 
 
 class User(Base):
-    __tablename__ = "users"
+    __tablename__ = "flow_users"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(255))
@@ -39,7 +39,7 @@ class User(Base):
 
 
 class UserFollow(Base):
-    __tablename__ = "user_follows"
+    __tablename__ = "flow_user_follows"
     __table_args__ = (
         UniqueConstraint("follower_id", "followee_id", name="uq_follow_pair"),
     )
@@ -50,7 +50,7 @@ class UserFollow(Base):
 
 
 class Category(Base):
-    __tablename__ = "categories"
+    __tablename__ = "flow_categories"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     name: Mapped[str] = mapped_column(String(64))
@@ -59,10 +59,10 @@ class Category(Base):
 
 
 class Listing(Base):
-    __tablename__ = "listings"
+    __tablename__ = "flow_listings"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    seller_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    seller_id: Mapped[str] = mapped_column(ForeignKey("flow_users.id"))
     title: Mapped[str] = mapped_column(String(255), default="")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     price: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
@@ -80,7 +80,7 @@ class Listing(Base):
 
 
 class Favorite(Base):
-    __tablename__ = "favorites"
+    __tablename__ = "flow_favorites"
     __table_args__ = (
         UniqueConstraint("user_id", "listing_id", name="uq_fav_pair"),
     )
@@ -91,12 +91,12 @@ class Favorite(Base):
 
 
 class Order(Base):
-    __tablename__ = "orders"
+    __tablename__ = "flow_orders"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    buyer_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
-    seller_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
-    listing_id: Mapped[str] = mapped_column(ForeignKey("listings.id"))
+    buyer_id: Mapped[str] = mapped_column(ForeignKey("flow_users.id"))
+    seller_id: Mapped[str] = mapped_column(ForeignKey("flow_users.id"))
+    listing_id: Mapped[str] = mapped_column(ForeignKey("flow_listings.id"))
     listing_title: Mapped[str] = mapped_column(String(255), default="")
     listing_image: Mapped[str] = mapped_column(String(1024), default="")
     price: Mapped[float] = mapped_column(Numeric(12, 2), default=0)
@@ -110,14 +110,14 @@ class Order(Base):
 
 
 class Conversation(Base):
-    __tablename__ = "conversations"
+    __tablename__ = "flow_conversations"
     __table_args__ = (
         UniqueConstraint("user_a_id", "user_b_id", name="uq_conv_pair"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_a_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
-    user_b_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    user_a_id: Mapped[str] = mapped_column(ForeignKey("flow_users.id"))
+    user_b_id: Mapped[str] = mapped_column(ForeignKey("flow_users.id"))
     last_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     last_message_time: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     unread_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -128,11 +128,11 @@ class Conversation(Base):
 
 
 class Message(Base):
-    __tablename__ = "messages"
+    __tablename__ = "flow_messages"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    conversation_id: Mapped[str] = mapped_column(ForeignKey("conversations.id"))
-    sender_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    conversation_id: Mapped[str] = mapped_column(ForeignKey("flow_conversations.id"))
+    sender_id: Mapped[str] = mapped_column(ForeignKey("flow_users.id"))
     text: Mapped[str | None] = mapped_column(Text, nullable=True)
     image_url: Mapped[str] = mapped_column(String(1024), default="")
     timestamp: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
@@ -140,10 +140,10 @@ class Message(Base):
 
 
 class Review(Base):
-    __tablename__ = "reviews"
+    __tablename__ = "flow_reviews"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    seller_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    seller_id: Mapped[str] = mapped_column(ForeignKey("flow_users.id"))
     reviewer_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     user_name: Mapped[str] = mapped_column(String(255), default="")
     user_avatar: Mapped[str] = mapped_column(String(1024), default="")
@@ -155,10 +155,10 @@ class Review(Base):
 
 
 class Notification(Base):
-    __tablename__ = "notifications"
+    __tablename__ = "flow_notifications"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"))
+    user_id: Mapped[str] = mapped_column(ForeignKey("flow_users.id"))
     title: Mapped[str] = mapped_column(String(255), default="")
     body: Mapped[str | None] = mapped_column(Text, nullable=True)
     type: Mapped[str] = mapped_column(String(16), default="system")

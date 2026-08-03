@@ -1,7 +1,7 @@
 -- Flow App MySQL schema (utf8mb4)
 -- Mirrors the freezed models in lib/features/*/data/models/
 
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS flow_users (
     id              VARCHAR(64)  NOT NULL PRIMARY KEY,
     name            VARCHAR(255) NOT NULL,
     email           VARCHAR(255) NOT NULL UNIQUE,
@@ -19,23 +19,23 @@ CREATE TABLE IF NOT EXISTS users (
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS user_follows (
+CREATE TABLE IF NOT EXISTS flow_user_follows (
     follower_id VARCHAR(64) NOT NULL,
     followee_id VARCHAR(64) NOT NULL,
     created_at  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (follower_id, followee_id),
-    CONSTRAINT fk_follows_follower FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_follows_followee FOREIGN KEY (followee_id) REFERENCES users(id) ON DELETE CASCADE
+    CONSTRAINT fk_follows_follower FOREIGN KEY (follower_id) REFERENCES flow_users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_follows_followee FOREIGN KEY (followee_id) REFERENCES flow_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS categories (
+CREATE TABLE IF NOT EXISTS flow_categories (
     id    VARCHAR(64)  NOT NULL PRIMARY KEY,
     name  VARCHAR(64)  NOT NULL,
     icon  VARCHAR(64)  NOT NULL DEFAULT 'other',
     count INT          NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS listings (
+CREATE TABLE IF NOT EXISTS flow_listings (
     id             VARCHAR(64)   NOT NULL PRIMARY KEY,
     seller_id      VARCHAR(64)   NOT NULL,
     title          VARCHAR(255)  NOT NULL DEFAULT '',
@@ -52,22 +52,22 @@ CREATE TABLE IF NOT EXISTS listings (
     favorite_count INT           NOT NULL DEFAULT 0,
     item_condition VARCHAR(32)   NOT NULL DEFAULT '',
     location       VARCHAR(255)  NOT NULL DEFAULT '',
-    CONSTRAINT fk_listings_seller FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_listings_seller FOREIGN KEY (seller_id) REFERENCES flow_users(id) ON DELETE CASCADE,
     INDEX idx_listings_category (category),
     INDEX idx_listings_status (status),
     INDEX idx_listings_seller (seller_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS favorites (
+CREATE TABLE IF NOT EXISTS flow_favorites (
     user_id    VARCHAR(64) NOT NULL,
     listing_id VARCHAR(64) NOT NULL,
     created_at DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (user_id, listing_id),
-    CONSTRAINT fk_favs_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_favs_listing FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE
+    CONSTRAINT fk_favs_user FOREIGN KEY (user_id) REFERENCES flow_users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_favs_listing FOREIGN KEY (listing_id) REFERENCES flow_listings(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS orders (
+CREATE TABLE IF NOT EXISTS flow_orders (
     id               VARCHAR(64)   NOT NULL PRIMARY KEY,
     buyer_id         VARCHAR(64)   NOT NULL,
     seller_id        VARCHAR(64)   NOT NULL,
@@ -82,14 +82,14 @@ CREATE TABLE IF NOT EXISTS orders (
     payment_method   VARCHAR(64)   NOT NULL DEFAULT '',
     is_paid          BOOLEAN       NOT NULL DEFAULT FALSE,
     quantity         INT           NOT NULL DEFAULT 1,
-    CONSTRAINT fk_orders_buyer FOREIGN KEY (buyer_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_orders_seller FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_orders_listing FOREIGN KEY (listing_id) REFERENCES listings(id) ON DELETE CASCADE,
+    CONSTRAINT fk_orders_buyer FOREIGN KEY (buyer_id) REFERENCES flow_users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_orders_seller FOREIGN KEY (seller_id) REFERENCES flow_users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_orders_listing FOREIGN KEY (listing_id) REFERENCES flow_listings(id) ON DELETE CASCADE,
     INDEX idx_orders_buyer (buyer_id),
     INDEX idx_orders_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS conversations (
+CREATE TABLE IF NOT EXISTS flow_conversations (
     id                 VARCHAR(64)   NOT NULL PRIMARY KEY,
     user_a_id          VARCHAR(64)   NOT NULL,
     user_b_id          VARCHAR(64)   NOT NULL,
@@ -100,14 +100,14 @@ CREATE TABLE IF NOT EXISTS conversations (
     product_title      VARCHAR(255)  NOT NULL DEFAULT '',
     product_image      VARCHAR(1024) NOT NULL DEFAULT '',
     created_at         DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_conv_a FOREIGN KEY (user_a_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_conv_b FOREIGN KEY (user_b_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_conv_a FOREIGN KEY (user_a_id) REFERENCES flow_users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_conv_b FOREIGN KEY (user_b_id) REFERENCES flow_users(id) ON DELETE CASCADE,
     UNIQUE KEY uq_conv_pair (user_a_id, user_b_id),
     INDEX idx_conv_user_a (user_a_id),
     INDEX idx_conv_user_b (user_b_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS messages (
+CREATE TABLE IF NOT EXISTS flow_messages (
     id              VARCHAR(64)   NOT NULL PRIMARY KEY,
     conversation_id VARCHAR(64)   NOT NULL,
     sender_id       VARCHAR(64)   NOT NULL,
@@ -115,12 +115,12 @@ CREATE TABLE IF NOT EXISTS messages (
     image_url       VARCHAR(1024) NOT NULL DEFAULT '',
     timestamp       DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     is_read         BOOLEAN       NOT NULL DEFAULT FALSE,
-    CONSTRAINT fk_msg_conv FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
-    CONSTRAINT fk_msg_sender FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_msg_conv FOREIGN KEY (conversation_id) REFERENCES flow_conversations(id) ON DELETE CASCADE,
+    CONSTRAINT fk_msg_sender FOREIGN KEY (sender_id) REFERENCES flow_users(id) ON DELETE CASCADE,
     INDEX idx_msg_conversation (conversation_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS reviews (
+CREATE TABLE IF NOT EXISTS flow_reviews (
     id          VARCHAR(64)   NOT NULL PRIMARY KEY,
     seller_id   VARCHAR(64)   NOT NULL,
     reviewer_id VARCHAR(64)   NULL,
@@ -131,11 +131,11 @@ CREATE TABLE IF NOT EXISTS reviews (
     text        TEXT          NULL,
     has_photo   BOOLEAN       NOT NULL DEFAULT FALSE,
     photo_url   VARCHAR(1024) NOT NULL DEFAULT '',
-    CONSTRAINT fk_reviews_seller FOREIGN KEY (seller_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_reviews_seller FOREIGN KEY (seller_id) REFERENCES flow_users(id) ON DELETE CASCADE,
     INDEX idx_reviews_seller (seller_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS notifications (
+CREATE TABLE IF NOT EXISTS flow_notifications (
     id         VARCHAR(64)   NOT NULL PRIMARY KEY,
     user_id    VARCHAR(64)   NOT NULL,
     title      VARCHAR(255)  NOT NULL DEFAULT '',
@@ -144,6 +144,6 @@ CREATE TABLE IF NOT EXISTS notifications (
     is_read    BOOLEAN       NOT NULL DEFAULT FALSE,
     created_at DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     data       JSON          NULL,
-    CONSTRAINT fk_notif_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_notif_user FOREIGN KEY (user_id) REFERENCES flow_users(id) ON DELETE CASCADE,
     INDEX idx_notif_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -1,0 +1,7 @@
+﻿id,seller_id,title,description,price,currency,images,category,subcategory,status,created_at,is_featured,view_count,favorite_count,item_condition,location
+list_001,user_002,iPhone 15 Pro Max 256GB,"Como nuevo, con caja y accesorios originales. Bateria al 98%.",18500.00,NGN,[],Electronics,,active,2026-08-03 16:03:26,0,234,18,Like new,Ciudad de Mexico
+list_002,user_003,Nike Air Max 90 Talla 10,"Zapatos deportivos en excelente estado, usados solo dos veces.",1800.00,NGN,[],Fashion,,active,2026-08-02 19:03:26,0,89,7,Used,Guadalajara
+list_003,user_004,"MacBook Air M2 13""","16GB RAM, 512GB SSD. Perfecto estado, con cargador original.",21000.00,NGN,[],Electronics,,active,2026-07-31 19:03:26,1,412,45,Like new,Monterrey
+list_004,user_005,Sofa 3 Plazas Color Gris,"Sofa moderno en tela premium, muy cómodo y sin manchas.",5500.00,NGN,[],Home,,active,2026-07-29 19:03:26,0,67,4,Used,Puebla
+list_005,user_006,Bicicleta de Montaña Trek,"21 velocidades, suspension delantera. Ideal para senderismo.",4200.00,NGN,[],Sports,,active,2026-08-01 19:03:26,0,156,12,Used,Queretaro
+list_010,user_001,PlayStation 5 + 2 Mandos,Consola en perfecto estado con dos mandos DualSense.,8500.00,NGN,[],Electronics,,active,2026-07-24 19:03:26,0,189,14,Like new,Ciudad de Mexico

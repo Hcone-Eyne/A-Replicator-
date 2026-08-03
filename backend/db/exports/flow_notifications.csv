@@ -1,0 +1,7 @@
+﻿id,user_id,title,body,type,is_read,created_at,data
+notif_001,user_001,Order Shipped,Your order #FLW-001 has been shipped.,order,0,2026-08-03 18:33:26,"{""orderId"": ""ord_001""}"
+notif_002,user_001,New Message,Maria Lopez sent you a message.,message,0,2026-08-03 17:03:26,"{""conversationId"": ""conv_001""}"
+notif_003,user_001,Payment Received,"Payment of $18,500 confirmed for order #FLW-001.",order,1,2026-08-03 13:03:26,"{""orderId"": ""ord_001""}"
+notif_004,user_001,Weekend Sale,Up to 40% off on electronics. Don't miss out!,promotion,1,2026-08-02 19:03:26,
+notif_005,user_001,Account Verified,Your account has been successfully verified.,system,1,2026-08-01 19:03:26,
+notif_006,user_001,New Message,Ana Garcia sent you a message.,message,0,2026-08-03 14:03:26,"{""conversationId"": ""conv_003""}"

@@ -1,4 +1,0 @@
-﻿id,user_a_id,user_b_id,last_message,last_message_time,unread_count,is_online,product_title,product_image,created_at
-conv_001,user_001,user_002,"Si, esta disponible. Te lo puedo enviar manana.",2026-08-03 17:55:21,2,1,iPhone 15 Pro Max 256GB,,2026-08-02 18:10:21
-conv_002,user_001,user_003,Gracias por la compra!,2026-08-03 16:10:21,0,0,Nike Air Max 90 Talla 10,,2026-08-01 18:10:21
-conv_003,user_001,user_004,Tiene algun descuento?,2026-08-02 18:10:21,1,1,"MacBook Air M2 13""",,2026-08-02 18:10:21

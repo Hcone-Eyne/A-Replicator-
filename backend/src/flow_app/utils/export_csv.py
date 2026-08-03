@@ -20,16 +20,16 @@ DB_CONFIG = {
 }
 
 TABLES = [
-    "users",
-    "user_follows",
-    "categories",
-    "listings",
-    "favorites",
-    "orders",
-    "conversations",
-    "messages",
-    "reviews",
-    "notifications",
+    "flow_users",
+    "flow_user_follows",
+    "flow_categories",
+    "flow_listings",
+    "flow_favorites",
+    "flow_orders",
+    "flow_conversations",
+    "flow_messages",
+    "flow_reviews",
+    "flow_notifications",
 ]
 
 OUTPUT_DIR = (

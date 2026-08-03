@@ -1,7 +1,0 @@
-﻿id,seller_id,reviewer_id,user_name,user_avatar,rating,date,text,has_photo,photo_url
-rev_001,user_002,user_001,Carlos Mendoza,,5,2026-07-29 18:10:21,Excelente vendedor! El producto llego en perfecto estado y muy rapido.,0,
-rev_002,user_002,,Laura Sanchez,,5,2026-07-19 18:10:21,Muy profesional. Recomendado 100%.,1,
-rev_003,user_002,,Roberto Diaz,,4,2026-07-04 18:10:21,"Buen producto, demoro un poco el envio pero todo bien.",0,
-rev_004,user_003,,Pedro Ramirez,,4,2026-07-24 18:10:21,"Buena calidad, tal como se veia en las fotos.",0,
-rev_005,user_004,,Sofia Torres,,5,2026-07-31 18:10:21,MacBook en perfecto estado. Envio super rapido.,0,
-rev_006,user_004,,Miguel Angel,,5,2026-07-26 18:10:21,"Excelente vendedor, muy confiable.",0,

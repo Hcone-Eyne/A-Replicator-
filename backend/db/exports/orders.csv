@@ -1,6 +1,0 @@
-﻿id,buyer_id,seller_id,listing_id,listing_title,listing_image,price,currency,status,created_at,shipping_address,payment_method,is_paid,quantity
-ord_001,user_001,user_002,list_001,iPhone 15 Pro Max 256GB,,18500.00,NGN,shipped,2026-08-01 18:10:21,"Av. Reforma 123, Ciudad de Mexico",,1,1
-ord_002,user_001,user_004,list_003,"MacBook Air M2 13""",,21000.00,NGN,delivered,2026-07-27 18:10:21,"Calle Independencia 456, Monterrey",,1,1
-ord_003,user_001,user_003,list_002,Nike Air Max 90 Talla 10,,1800.00,NGN,pending,2026-08-03 12:10:21,"Blvd. Vallarta 789, Guadalajara",,0,1
-ord_004,user_001,user_005,list_004,Sofa 3 Plazas Color Gris,,5500.00,NGN,confirmed,2026-08-03 06:10:21,"Calle 5 de Mayo 101, Puebla",,1,1
-ord_005,user_001,user_006,list_005,Bicicleta de Montaña Trek,,4200.00,NGN,cancelled,2026-07-24 18:10:21,"Av. Universidad 202, Queretaro",,0,1
