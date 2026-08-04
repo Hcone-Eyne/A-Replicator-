@@ -63,3 +63,25 @@ class MessageSendRequest(BaseModel):
 
 class OrderCancelRequest(BaseModel):
     reason: str | None = None
+
+
+class OrderCreateRequest(BaseModel):
+    listingId: str
+    quantity: int = 1
+    shippingAddress: str = ""
+    paymentMethod: str = ""
+
+
+class ConversationCreateRequest(BaseModel):
+    otherUserId: str
+    productId: str | None = None
+    productTitle: str = ""
+    productImage: str = ""
+    initialMessage: str = ""
+
+
+class ReviewCreateRequest(BaseModel):
+    rating: int = 5
+    text: str = ""
+    hasPhoto: bool = False
+    photoUrl: str = ""

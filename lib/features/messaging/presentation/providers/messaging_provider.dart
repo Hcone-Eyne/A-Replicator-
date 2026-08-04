@@ -49,6 +49,30 @@ class MessagingNotifier extends StateNotifier<MessagingState> {
     }
   }
 
+  Future<ConversationModel?> createConversation({
+    required String otherUserId,
+    String? productId,
+    String productTitle = '',
+    String productImage = '',
+    String initialMessage = '',
+  }) async {
+    final result = await _repository.createConversation(
+      otherUserId: otherUserId,
+      productId: productId,
+      productTitle: productTitle,
+      productImage: productImage,
+      initialMessage: initialMessage,
+    );
+    if (!result.isSuccess) return null;
+
+    final conversation = result.data!;
+    final current = state.conversations.valueOrNull ?? [];
+    state = state.copyWith(
+      conversations: AsyncValue.data([conversation, ...current]),
+    );
+    return conversation;
+  }
+
   void search(String query) {
     final allConversations = state.conversations.valueOrNull ?? [];
     final filtered = allConversations.where((conv) {

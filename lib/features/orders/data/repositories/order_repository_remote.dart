@@ -37,6 +37,27 @@ class OrderRemoteRepository extends ApiRepository implements OrderRepository {
   }
 
   @override
+  Future<Result<OrderModel>> createOrder({
+    required String listingId,
+    int quantity = 1,
+    String shippingAddress = '',
+    String paymentMethod = '',
+  }) {
+    return guard(() async {
+      final response = await ApiClient.dio.post(
+        '/orders',
+        data: {
+          'listingId': listingId,
+          'quantity': quantity,
+          'shippingAddress': shippingAddress,
+          'paymentMethod': paymentMethod,
+        },
+      );
+      return OrderModel.fromJson(response.data as Map<String, dynamic>);
+    });
+  }
+
+  @override
   Future<Result<void>> cancelOrder({
     required String id,
     String? reason,

@@ -1,23 +1,134 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/router/route_names.dart';
+import '../../../../core/widgets/feedback/app_snackbar.dart';
+import '../../data/models/listing_model.dart';
+import '../providers/listing_provider.dart';
 
-class CreateListingScreen extends StatefulWidget {
+class CreateListingScreen extends ConsumerStatefulWidget {
   const CreateListingScreen({super.key});
 
   @override
-  State<CreateListingScreen> createState() => _CreateListingScreenState();
+  ConsumerState<CreateListingScreen> createState() => _CreateListingScreenState();
 }
 
-class _CreateListingScreenState extends State<CreateListingScreen> {
+class _CreateListingScreenState extends ConsumerState<CreateListingScreen> {
   String _selectedCondition = 'New';
   String _selectedDetail = 'Like New';
+  String _selectedCategory = '';
   final List<String> _tags = ['Leather', 'Travel'];
+  final List<String> _images = [];
+  bool _isSubmitting = false;
+  String? _editingId;
+
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _priceController = TextEditingController();
+  final _locationController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _editingId = GoRouterState.of(context).uri.queryParameters['id'];
+    if (_editingId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(listingProvider.notifier).getListingById(_editingId!);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _priceController.dispose();
+    _locationController.dispose();
+    super.dispose();
+  }
+
+  void _prefill(ListingModel listing) {
+    _titleController.text = listing.title;
+    _descriptionController.text = listing.description;
+    _priceController.text = listing.price > 0 ? listing.price.toStringAsFixed(2) : '';
+    _locationController.text = listing.location;
+    _selectedCategory = listing.category;
+    _selectedDetail = listing.condition.isEmpty ? 'Like New' : listing.condition;
+    _images
+      ..clear()
+      ..addAll(listing.images);
+    setState(() {});
+  }
+
+  Future<void> _submit() async {
+    final title = _titleController.text.trim();
+    final description = _descriptionController.text.trim();
+    final price = double.tryParse(_priceController.text.trim());
+    final location = _locationController.text.trim();
+
+    if (title.isEmpty || _selectedCategory.isEmpty) {
+      AppSnackbar.show(context, 'Please enter a title and select a category');
+      return;
+    }
+    if (price == null || price <= 0) {
+      AppSnackbar.show(context, 'Please enter a valid price');
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
+    if (_editingId != null) {
+      await ref.read(listingProvider.notifier).updateListing(
+            id: _editingId!,
+            title: title,
+            description: description,
+            price: price,
+            category: _selectedCategory,
+            condition: _selectedDetail,
+            location: location,
+            images: _images,
+          );
+      if (!mounted) return;
+      setState(() => _isSubmitting = false);
+      AppSnackbar.show(context, 'Listing updated');
+      context.pop();
+      return;
+    }
+
+    final created = await ref.read(listingProvider.notifier).createListing(
+          title: title,
+          description: description,
+          price: price,
+          category: _selectedCategory,
+          condition: _selectedDetail,
+          location: location,
+          images: _images,
+        );
+
+    if (!mounted) return;
+    setState(() => _isSubmitting = false);
+
+    if (created == null) {
+      AppSnackbar.show(context, 'Failed to create listing. Please try again.');
+      return;
+    }
+    AppSnackbar.show(context, 'Listing created');
+    context.pushNamed(
+      RouteNames.nListingPreview,
+      pathParameters: {'id': created.id},
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    final editing = _editingId != null;
+    final editingListing = ref.watch(listingProvider).selectedListing.valueOrNull;
+    if (editing && editingListing != null && _titleController.text.isEmpty) {
+      _prefill(editingListing);
+    }
+
     return Scaffold(
       backgroundColor: AppColors.surfaceBright,
       appBar: AppBar(
@@ -28,7 +139,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           icon: const Icon(Icons.arrow_back, color: AppColors.primary),
         ),
         title: Text(
-          'Create Listing',
+          editing ? 'Edit Listing' : 'Create Listing',
           style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.w700,
@@ -37,7 +148,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () {},
+            onPressed: () => AppSnackbar.show(context, 'Drafts coming soon'),
             child: Text(
               'DRAFTS',
               style: GoogleFonts.inter(
@@ -85,7 +196,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               ),
             ),
             Text(
-              '0/10',
+              '${_images.length}/10',
               style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
@@ -185,7 +296,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       children: [
         _buildLabel('Product Name'),
         const SizedBox(height: 8),
-        _buildTextField(hint: 'e.g. Premium Leather Weekend Bag'),
+        _buildTextField(
+          hint: 'e.g. Premium Leather Weekend Bag',
+          controller: _titleController,
+        ),
         const SizedBox(height: 24),
         _buildLabel('Category'),
         const SizedBox(height: 8),
@@ -203,6 +317,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         _buildTextField(
           hint: 'Describe what you are selling in detail...',
           maxLines: 4,
+          controller: _descriptionController,
         ),
         const SizedBox(height: 24),
         Row(
@@ -213,7 +328,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                 children: [
                   _buildLabel('Price'),
                   const SizedBox(height: 8),
-                  _buildTextField(hint: '0.00', prefix: '\$'),
+                  _buildTextField(
+                    hint: '0.00',
+                    prefix: '\$',
+                    controller: _priceController,
+                  ),
                 ],
               ),
             ),
@@ -247,6 +366,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         _buildTextField(
           hint: 'Add location for local pickup',
           prefixIcon: Icons.location_on,
+          controller: _locationController,
         ),
         const SizedBox(height: 24),
         _buildLabel('Tags (Maximum 5)'),
@@ -273,6 +393,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     int maxLines = 1,
     String? prefix,
     IconData? prefixIcon,
+    TextEditingController? controller,
   }) {
     return Container(
       height: maxLines == 1 ? 56 : null,
@@ -282,6 +403,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         border: Border.all(color: AppColors.outlineVariant),
       ),
       child: TextField(
+        controller: controller,
         maxLines: maxLines,
         decoration: InputDecoration(
           hintText: hint,
@@ -308,26 +430,30 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.outlineVariant),
       ),
-      child: DropdownButtonFormField<String>(
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: GoogleFonts.inter(
-            fontSize: 16,
-            color: AppColors.outline,
+      child: DropdownButtonHideUnderline(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: DropdownButton<String>(
+            value: _selectedCategory.isEmpty ? null : _selectedCategory,
+            hint: Text(
+              hint,
+              style: GoogleFonts.inter(fontSize: 16, color: AppColors.outline),
+            ),
+            icon: const Icon(Icons.expand_more, color: AppColors.secondary),
+            isExpanded: true,
+            style: GoogleFonts.inter(
+              fontSize: 16,
+              color: AppColors.onSurface,
+            ),
+            items: const [
+              DropdownMenuItem(value: 'electronics', child: Text('Electronics')),
+              DropdownMenuItem(value: 'fashion', child: Text('Fashion & Accessories')),
+              DropdownMenuItem(value: 'home', child: Text('Home & Garden')),
+              DropdownMenuItem(value: 'sports', child: Text('Sports & Outdoors')),
+            ],
+            onChanged: (value) => setState(() => _selectedCategory = value ?? ''),
           ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16),
         ),
-        icon: const Icon(Icons.expand_more, color: AppColors.secondary),
-        items: const [
-          DropdownMenuItem(value: 'electronics', child: Text('Electronics')),
-          DropdownMenuItem(value: 'fashion', child: Text('Fashion & Accessories')),
-          DropdownMenuItem(value: 'home', child: Text('Home & Garden')),
-          DropdownMenuItem(value: 'sports', child: Text('Sports & Outdoors')),
-        ],
-        onChanged: (value) {
-          // TODO: wire category selection to state
-        },
       ),
     );
   }
@@ -515,23 +641,32 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             width: double.infinity,
             height: 52,
             child: ElevatedButton(
-              onPressed: () => context.pushNamed(RouteNames.nListingPreview, pathParameters: {'id': 'new'}),
+              onPressed: _isSubmitting ? null : _submit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
+                backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(99),
                 ),
                 elevation: 0,
               ),
-              child: Text(
-                'Continue',
-                style: GoogleFonts.inter(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.onPrimary,
-                ),
-              ),
+              child: _isSubmitting
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.5,
+                        color: AppColors.onPrimary,
+                      ),
+                    )
+                  : Text(
+                      _editingId != null ? 'Update Listing' : 'Continue',
+                      style: GoogleFonts.inter(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.onPrimary,
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 8),

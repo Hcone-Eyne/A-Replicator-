@@ -1,4 +1,5 @@
 import '../../../auth/data/models/user_model.dart';
+import '../../../home/data/models/listing_model.dart';
 import '../models/review_model.dart';
 import '../models/seller_model.dart';
 import '../../../../shared/models/result.dart';
@@ -26,6 +27,21 @@ abstract class ProfileRepository {
     required String sellerId,
     int page = 1,
     int limit = 20,
+  });
+
+  Future<Result<List<ListingModel>>> getMyListings({
+    int page = 1,
+    int limit = 20,
+    String? status,
+  });
+
+  Future<Result<List<ListingModel>>> getWishlist({
+    int page = 1,
+    int limit = 20,
+  });
+
+  Future<Result<void>> removeFromWishlist({
+    required String listingId,
   });
 }
 
@@ -84,6 +100,57 @@ class MockProfileRepository implements ProfileRepository {
       listingsCount: 32,
     ),
   };
+
+  static final _mockListings = [
+    ListingModel(
+      id: 'list_010',
+      sellerId: 'user_001',
+      title: 'Antique Brass Table Lamp',
+      description: 'Vintage mid-century table lamp in excellent condition.',
+      price: 850.0,
+      currency: 'NGN',
+      images: const [],
+      category: 'Home & Living',
+      subcategory: 'Lighting',
+      status: ListingStatus.active,
+      createdAt: DateTime.now().subtract(const Duration(days: 2)),
+      condition: 'Used - Good',
+      location: 'Lagos, Nigeria',
+    ),
+    ListingModel(
+      id: 'list_011',
+      sellerId: 'user_001',
+      title: 'Handwoven Rattan Chair',
+      description: 'Beautifully crafted rattan accent chair.',
+      price: 1200.0,
+      currency: 'NGN',
+      images: const [],
+      category: 'Furniture',
+      subcategory: 'Chairs',
+      status: ListingStatus.active,
+      createdAt: DateTime.now().subtract(const Duration(days: 6)),
+      condition: 'Used - Like New',
+      location: 'Lagos, Nigeria',
+    ),
+  ];
+
+  static final _mockWishlist = [
+    ListingModel(
+      id: 'list_020',
+      sellerId: 'user_002',
+      title: 'Vintage Film Camera',
+      description: 'Classic 35mm film camera, fully functional.',
+      price: 1500.0,
+      currency: 'NGN',
+      images: const [],
+      category: 'Electronics',
+      subcategory: 'Cameras',
+      status: ListingStatus.active,
+      createdAt: DateTime.now().subtract(const Duration(days: 10)),
+      condition: 'Used - Good',
+      location: 'Abuja, Nigeria',
+    ),
+  ];
 
   static final _mockReviews = <String, List<ReviewModel>>{
     'user_002': [
@@ -207,5 +274,44 @@ class MockProfileRepository implements ProfileRepository {
     final end = start + limit;
     final paged = reviews.sublist(start, end.clamp(0, reviews.length));
     return Success(paged);
+  }
+
+  @override
+  Future<Result<List<ListingModel>>> getMyListings({
+    int page = 1,
+    int limit = 20,
+    String? status,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    var listings = _mockListings;
+    if (status != null) {
+      listings = listings.where((l) => l.status.value == status).toList();
+    }
+    final start = (page - 1) * limit;
+    final end = start + limit;
+    final paged = listings.sublist(start, end.clamp(0, listings.length));
+    return Success(paged);
+  }
+
+  @override
+  Future<Result<List<ListingModel>>> getWishlist({
+    int page = 1,
+    int limit = 20,
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 400));
+
+    final start = (page - 1) * limit;
+    final end = start + limit;
+    final paged = _mockWishlist.sublist(start, end.clamp(0, _mockWishlist.length));
+    return Success(paged);
+  }
+
+  @override
+  Future<Result<void>> removeFromWishlist({required String listingId}) async {
+    await Future.delayed(const Duration(milliseconds: 300));
+
+    _mockWishlist.removeWhere((l) => l.id == listingId);
+    return const Success(null);
   }
 }

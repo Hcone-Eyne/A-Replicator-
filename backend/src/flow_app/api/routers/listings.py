@@ -29,9 +29,14 @@ def get_listings(
     limit: int = Query(20, ge=1, le=100),
     category: str | None = None,
     sortBy: str | None = None,
+    sellerId: str | None = None,
     db: Session = Depends(get_db),
 ):
-    query = select(Listing).where(Listing.status == "active")
+    query = select(Listing)
+    if sellerId:
+        query = query.where(Listing.seller_id == sellerId)
+    else:
+        query = query.where(Listing.status == "active")
     if category:
         query = query.where(Listing.category == category)
 
@@ -43,6 +48,44 @@ def get_listings(
         query = query.order_by(Listing.created_at.desc())
     else:
         query = query.order_by(Listing.created_at.desc())
+
+    total = len(db.scalars(query).all())
+    rows = db.scalars(query.offset((page - 1) * limit).limit(limit)).all()
+    items = [_listing_payload(db, l) for l in rows]
+    return pagination(items, page, limit, total)
+
+
+@router.get("/users/me/listings")
+def get_my_listings(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    status: str | None = None,
+    db: Session = Depends(get_db),
+):
+    query = select(Listing).where(Listing.seller_id == settings.current_user_id)
+    if status:
+        query = query.where(Listing.status == status)
+    query = query.order_by(Listing.created_at.desc())
+
+    total = len(db.scalars(query).all())
+    rows = db.scalars(query.offset((page - 1) * limit).limit(limit)).all()
+    items = [_listing_payload(db, l) for l in rows]
+    return pagination(items, page, limit, total)
+
+
+@router.get("/wishlist")
+def get_wishlist(
+    page: int = Query(1, ge=1),
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    user_id = settings.current_user_id
+    query = (
+        select(Listing)
+        .join(Favorite, Favorite.listing_id == Listing.id)
+        .where(Favorite.user_id == user_id)
+        .order_by(Favorite.created_at.desc())
+    )
 
     total = len(db.scalars(query).all())
     rows = db.scalars(query.offset((page - 1) * limit).limit(limit)).all()

@@ -6,7 +6,7 @@ from ...config import settings
 from ...core.database import get_db
 from ...core.services import user_payload
 from ...models import Listing, Order, Review, User, UserFollow
-from ..schemas import ProfileUpdateRequest
+from ..schemas import ProfileUpdateRequest, ReviewCreateRequest
 from ..serializers import serialize_review, serialize_seller
 
 router = APIRouter(tags=["profiles"])
@@ -97,3 +97,45 @@ def get_reviews(
     total = len(db.scalars(query).all())
     rows = db.scalars(query.offset((page - 1) * limit).limit(limit)).all()
     return [serialize_review(r) for r in rows]
+
+
+@router.post("/sellers/{seller_id}/reviews", status_code=201)
+def create_review(
+    seller_id: str,
+    body: ReviewCreateRequest,
+    db: Session = Depends(get_db),
+):
+    import time
+
+    seller = db.get(User, seller_id)
+    if not seller:
+        raise HTTPException(status_code=404, detail="Seller not found")
+    if not 1 <= body.rating <= 5:
+        raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
+
+    reviewer = db.get(User, settings.current_user_id)
+    review = Review(
+        id=f"rev_{int(time.time() * 1000)}",
+        seller_id=seller_id,
+        reviewer_id=settings.current_user_id,
+        user_name=reviewer.name if reviewer else "",
+        user_avatar=reviewer.avatar_url if reviewer else "",
+        rating=body.rating,
+        text=body.text,
+        has_photo=body.hasPhoto,
+        photo_url=body.photoUrl,
+    )
+    db.add(review)
+    db.flush()
+
+    avg = db.scalar(
+        select(func.avg(Review.rating)).where(Review.seller_id == seller_id)
+    )
+    count = db.scalar(
+        select(func.count()).select_from(Review).where(Review.seller_id == seller_id)
+    )
+    seller.rating = float(avg) or 0
+    seller.reviews_count = int(count or 0)
+    db.commit()
+    db.refresh(review)
+    return serialize_review(review)

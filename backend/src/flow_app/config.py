@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     database_url: str = "mysql+pymysql://flow_app:flow_dev_password@localhost:3306/flow_app"
     current_user_id: str = "user_001"
     cors_origins: str = "*"
+    upload_dir: str = "backend/uploads"
 
 
 settings = Settings()

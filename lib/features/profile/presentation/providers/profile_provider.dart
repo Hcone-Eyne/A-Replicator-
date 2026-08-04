@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/network/api_config.dart';
 import '../../../auth/data/models/user_model.dart';
 import '../../../home/data/models/listing_model.dart';
+import '../../../home/data/repositories/listing_repository.dart';
+import '../../../home/presentation/providers/listing_provider.dart';
 import '../../data/models/review_model.dart';
 import '../../data/models/seller_model.dart';
 import '../../data/repositories/profile_repository.dart';
@@ -34,8 +36,10 @@ class ProfileState {
 
 class ProfileNotifier extends StateNotifier<ProfileState> {
   final ProfileRepository _repository;
+  final ListingRepository _listingRepository;
 
-  ProfileNotifier(this._repository) : super(const ProfileState());
+  ProfileNotifier(this._repository, this._listingRepository)
+      : super(const ProfileState());
 
   Future<void> getProfile() async {
     state = state.copyWith(userProfile: const AsyncValue.loading());
@@ -74,28 +78,49 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     }
   }
 
-  Future<void> getMyListings() async {
+  Future<void> getMyListings({String? status}) async {
     state = state.copyWith(myListings: const AsyncValue.loading());
-    await Future.delayed(const Duration(milliseconds: 600));
-    state = state.copyWith(myListings: const AsyncValue.data([]));
+    final result = await _repository.getMyListings(status: status);
+    if (result.isSuccess) {
+      state = state.copyWith(myListings: AsyncValue.data(result.data ?? []));
+    } else {
+      state = state.copyWith(
+        myListings: AsyncValue.error(result.errorMessage!, StackTrace.empty),
+      );
+    }
   }
 
   Future<void> getWishlist() async {
     state = state.copyWith(wishlist: const AsyncValue.loading());
-    await Future.delayed(const Duration(milliseconds: 600));
-    state = state.copyWith(wishlist: const AsyncValue.data([]));
+    final result = await _repository.getWishlist();
+    if (result.isSuccess) {
+      state = state.copyWith(wishlist: AsyncValue.data(result.data ?? []));
+    } else {
+      state = state.copyWith(
+        wishlist: AsyncValue.error(result.errorMessage!, StackTrace.empty),
+      );
+    }
   }
 
-  void removeFromWishlist(String listingId) {
-    final current = state.wishlist.valueOrNull ?? [];
-    state = state.copyWith(
-      wishlist: AsyncValue.data(
-        current.where((l) => l.id != listingId).toList(),
-      ),
+  Future<void> removeFromWishlist(String listingId) async {
+    final result = await _repository.removeFromWishlist(listingId: listingId);
+    if (result.isSuccess) {
+      final current = state.wishlist.valueOrNull ?? [];
+      state = state.copyWith(
+        wishlist: AsyncValue.data(
+          current.where((l) => l.id != listingId).toList(),
+        ),
+      );
+    }
+  }
+
+  Future<void> archiveListing(String listingId) async {
+    final result = await _listingRepository.updateListing(
+      id: listingId,
+      data: {'status': ListingStatus.expired.value},
     );
-  }
+    if (!result.isSuccess) return;
 
-  void archiveListing(String listingId) {
     final current = state.myListings.valueOrNull ?? [];
     state = state.copyWith(
       myListings: AsyncValue.data(
@@ -109,7 +134,13 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     );
   }
 
-  void markAsSold(String listingId) {
+  Future<void> markAsSold(String listingId) async {
+    final result = await _listingRepository.updateListing(
+      id: listingId,
+      data: {'status': ListingStatus.sold.value},
+    );
+    if (!result.isSuccess) return;
+
     final current = state.myListings.valueOrNull ?? [];
     state = state.copyWith(
       myListings: AsyncValue.data(
@@ -123,7 +154,10 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
     );
   }
 
-  void deleteListing(String listingId) {
+  Future<void> deleteListing(String listingId) async {
+    final result = await _listingRepository.deleteListing(id: listingId);
+    if (!result.isSuccess) return;
+
     final current = state.myListings.valueOrNull ?? [];
     state = state.copyWith(
       myListings: AsyncValue.data(
@@ -143,7 +177,8 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
 final profileProvider = StateNotifierProvider<ProfileNotifier, ProfileState>(
   (ref) {
     final repository = ref.watch(profileRepositoryProvider);
-    return ProfileNotifier(repository);
+    final listingRepository = ref.watch(listingRepositoryProvider);
+    return ProfileNotifier(repository, listingRepository);
   },
 );
 

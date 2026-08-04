@@ -1,4 +1,5 @@
 import '../models/order_model.dart';
+import '../../../home/data/repositories/listing_repository.dart';
 import '../../../../shared/models/pagination.dart';
 import '../../../../shared/models/result.dart';
 
@@ -11,6 +12,13 @@ abstract class OrderRepository {
 
   Future<Result<OrderModel>> getOrderById({
     required String id,
+  });
+
+  Future<Result<OrderModel>> createOrder({
+    required String listingId,
+    int quantity = 1,
+    String shippingAddress = '',
+    String paymentMethod = '',
   });
 
   Future<Result<void>> cancelOrder({
@@ -123,6 +131,35 @@ class MockOrderRepository implements OrderRepository {
 
     final order = _mockOrders[id];
     if (order == null) return const Error('Order not found');
+    return Success(order);
+  }
+
+  @override
+  Future<Result<OrderModel>> createOrder({
+    required String listingId,
+    int quantity = 1,
+    String shippingAddress = '',
+    String paymentMethod = '',
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 700));
+
+    final listing = MockListingRepository.getById(listingId);
+    final order = OrderModel(
+      id: 'ord_${DateTime.now().millisecondsSinceEpoch}',
+      buyerId: 'user_001',
+      sellerId: listing?.sellerId ?? 'user_002',
+      listingId: listingId,
+      listingTitle: listing?.title ?? 'Listing',
+      listingImage: listing?.images.isNotEmpty == true ? listing!.images.first : '',
+      price: listing?.price ?? 0.0,
+      status: OrderStatus.pending,
+      createdAt: DateTime.now(),
+      shippingAddress: shippingAddress,
+      paymentMethod: paymentMethod,
+      isPaid: paymentMethod.isNotEmpty,
+      quantity: quantity,
+    );
+    _mockOrders[order.id] = order;
     return Success(order);
   }
 

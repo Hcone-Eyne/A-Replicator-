@@ -21,6 +21,29 @@ class MessagingRemoteRepository extends ApiRepository
   }
 
   @override
+  Future<Result<ConversationModel>> createConversation({
+    required String otherUserId,
+    String? productId,
+    String productTitle = '',
+    String productImage = '',
+    String initialMessage = '',
+  }) {
+    return guard(() async {
+      final response = await ApiClient.dio.post(
+        '/conversations',
+        data: {
+          'otherUserId': otherUserId,
+          if (productId != null) 'productId': productId,
+          'productTitle': productTitle,
+          'productImage': productImage,
+          'initialMessage': initialMessage,
+        },
+      );
+      return ConversationModel.fromJson(response.data as Map<String, dynamic>);
+    });
+  }
+
+  @override
   Future<Result<List<MessageModel>>> getMessages({
     required String conversationId,
     int limit = 50,

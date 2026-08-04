@@ -1,9 +1,32 @@
 """Shared service helpers for routers."""
+import time
+
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..api import serializers
-from ..models import Favorite, Listing, User, UserFollow
+from ..models import Favorite, Listing, Notification, User, UserFollow
+
+
+def create_notification(
+    db: Session,
+    user_id: str,
+    title: str,
+    body: str = "",
+    type: str = "system",
+    data: dict | None = None,
+) -> Notification:
+    """Persist a notification for a user. Caller is responsible for commit."""
+    notification = Notification(
+        id=f"notif_{int(time.time() * 1000)}",
+        user_id=user_id,
+        title=title,
+        body=body,
+        type=type,
+        data=data or {},
+    )
+    db.add(notification)
+    return notification
 
 
 def user_payload(db: Session, user: User, current_user_id: str) -> dict:

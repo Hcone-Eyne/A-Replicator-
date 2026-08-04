@@ -142,6 +142,62 @@ class ListingNotifier extends StateNotifier<ListingState> {
       );
     }
   }
+
+  Future<ListingModel?> createListing({
+    required String title,
+    required String description,
+    required double price,
+    required String category,
+    String condition = 'New',
+    String location = '',
+    List<String> images = const [],
+  }) async {
+    final result = await _repository.createListing(
+      data: {
+        'title': title,
+        'description': description,
+        'price': price,
+        'category': category,
+        'condition': condition,
+        'location': location,
+        'images': images,
+      },
+    );
+    if (!result.isSuccess) return null;
+    final created = result.data!;
+    final current = state.listings.valueOrNull ?? [];
+    state = state.copyWith(
+      listings: AsyncValue.data([created, ...current]),
+      filteredListings: AsyncValue.data([created, ...current]),
+    );
+    return created;
+  }
+
+  Future<ListingModel?> updateListing({
+    required String id,
+    required String title,
+    required String description,
+    required double price,
+    required String category,
+    String condition = 'New',
+    String location = '',
+    List<String> images = const [],
+  }) async {
+    final result = await _repository.updateListing(
+      id: id,
+      data: {
+        'title': title,
+        'description': description,
+        'price': price,
+        'category': category,
+        'condition': condition,
+        'location': location,
+        'images': images,
+      },
+    );
+    if (!result.isSuccess) return null;
+    return result.data;
+  }
 }
 
 final listingRepositoryProvider = Provider<ListingRepository>((ref) {

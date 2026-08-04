@@ -152,6 +152,8 @@ class MockListingRepository implements ListingRepository {
     }).toList();
   }
 
+  static ListingModel? getById(String id) => _mockListings[id];
+
   @override
   Future<Result<Pagination<ListingModel>>> getListings({
     int page = 1,
@@ -268,6 +270,9 @@ class MockListingRepository implements ListingRepository {
       images: (data['images'] as List<dynamic>?)?.cast<String>() ?? existing.images,
       category: data['category'] as String? ?? existing.category,
       location: data['location'] as String? ?? existing.location,
+      status: data['status'] is String
+          ? ListingStatus.fromString(data['status'] as String)
+          : existing.status,
     );
     _mockListings[id] = updated;
     return Success(updated);

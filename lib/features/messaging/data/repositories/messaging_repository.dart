@@ -5,6 +5,14 @@ import '../../../../shared/models/result.dart';
 abstract class MessagingRepository {
   Future<Result<List<ConversationModel>>> getConversations();
 
+  Future<Result<ConversationModel>> createConversation({
+    required String otherUserId,
+    String? productId,
+    String productTitle = '',
+    String productImage = '',
+    String initialMessage = '',
+  });
+
   Future<Result<List<MessageModel>>> getMessages({
     required String conversationId,
     int limit = 50,
@@ -137,12 +145,61 @@ class MockMessagingRepository implements MessagingRepository {
     ],
   };
 
+  static const _mockUserNames = {
+    'user_002': 'Maria Lopez',
+    'user_003': 'Juan Perez',
+    'user_004': 'Ana Garcia',
+    'user_005': 'Sofia Torres',
+    'user_006': 'Diego Rivera',
+  };
+
   @override
   Future<Result<List<ConversationModel>>> getConversations() async {
     await Future.delayed(const Duration(milliseconds: 600));
     final sorted = _mockConversations.values.toList()
       ..sort((a, b) => b.lastMessageTime.compareTo(a.lastMessageTime));
     return Success(sorted);
+  }
+
+  @override
+  Future<Result<ConversationModel>> createConversation({
+    required String otherUserId,
+    String? productId,
+    String productTitle = '',
+    String productImage = '',
+    String initialMessage = '',
+  }) async {
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    final conversation = ConversationModel(
+      id: 'conv_${DateTime.now().millisecondsSinceEpoch}',
+      otherUserId: otherUserId,
+      otherUserName: _mockUserNames[otherUserId] ?? 'Seller',
+      otherUserInitials: (_mockUserNames[otherUserId] ?? 'Seller')
+          .split(' ')
+          .map((p) => p[0])
+          .take(2)
+          .join()
+          .toUpperCase(),
+      lastMessage: initialMessage,
+      lastMessageTime: DateTime.now(),
+      productTitle: productTitle,
+      productImage: productImage,
+    );
+
+    _mockConversations[conversation.id] = conversation;
+    _mockMessages[conversation.id] = initialMessage.isNotEmpty
+        ? [
+            MessageModel(
+              id: 'msg_${DateTime.now().millisecondsSinceEpoch}',
+              conversationId: conversation.id,
+              senderId: 'user_001',
+              text: initialMessage,
+              timestamp: DateTime.now(),
+            ),
+          ]
+        : [];
+    return Success(conversation);
   }
 
   @override

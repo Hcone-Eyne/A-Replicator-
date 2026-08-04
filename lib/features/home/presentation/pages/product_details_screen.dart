@@ -4,6 +4,11 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/router/route_names.dart';
+import '../../../../core/widgets/feedback/app_snackbar.dart';
+import '../../../messaging/presentation/providers/messaging_provider.dart';
+import '../../../orders/presentation/providers/order_provider.dart';
+import '../../../profile/presentation/providers/profile_provider.dart';
+import '../../data/models/listing_model.dart';
 import '../providers/listing_provider.dart';
 
 class ProductDetailsScreen extends ConsumerStatefulWidget {
@@ -402,10 +407,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => context.pushNamed(
-                        RouteNames.nConversation,
-                        pathParameters: {'id': listing.sellerId},
-                      ),
+                      onPressed: () => _contactSeller(listing),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: AppColors.onSurface,
                         side: const BorderSide(
@@ -428,10 +430,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () => context.pushNamed(
-                        RouteNames.nOfferNegotiation,
-                        pathParameters: {'id': listing.id},
-                      ),
+                      onPressed: () => _buyNow(listing),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         foregroundColor: AppColors.onPrimary,
@@ -443,7 +442,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                             const EdgeInsets.symmetric(vertical: 16),
                       ),
                       child: Text(
-                        'Make Offer',
+                        'Buy Now',
                         style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -459,8 +458,50 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
     );
   }
 
-  Widget _buildColorOption(int index, Color color) {
-    final isSelected = _selectedColor == index;
+  Future<void> _contactSeller(ListingModel listing) async {
+    final conversation = await ref
+        .read(messagingProvider.notifier)
+        .createConversation(
+          otherUserId: listing.sellerId,
+          productId: listing.id,
+          productTitle: listing.title,
+          productImage: listing.images.isNotEmpty ? listing.images.first : '',
+        );
+    if (!mounted) return;
+    if (conversation == null) {
+      AppSnackbar.show(context, 'Could not start a conversation. Please try again.');
+      return;
+    }
+    context.pushNamed(
+      RouteNames.nConversation,
+      pathParameters: {'id': conversation.id},
+    );
+  }
+
+  Future<void> _buyNow(ListingModel listing) async {
+    final currentUserId =
+        ref.read(profileProvider).userProfile.valueOrNull?.id;
+    if (currentUserId != null && listing.sellerId == currentUserId) {
+      AppSnackbar.show(context, 'You cannot buy your own listing');
+      return;
+    }
+
+    final order = await ref
+        .read(orderProvider.notifier)
+        .createOrder(listingId: listing.id);
+    if (!mounted) return;
+    if (order == null) {
+      AppSnackbar.show(context, 'Could not place the order. Please try again.');
+      return;
+    }
+    AppSnackbar.show(context, 'Order placed successfully');
+    context.pushNamed(
+      RouteNames.nTrackOrder,
+      pathParameters: {'id': order.id},
+    );
+  }
+
+  Widget _buildColorOption(int index, Color color) {    final isSelected = _selectedColor == index;
     return GestureDetector(
       onTap: () => setState(() => _selectedColor = index),
       child: Container(

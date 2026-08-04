@@ -1,7 +1,19 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
-from .api.routers import auth, categories, listings, messages, notifications, orders, profiles
+from .api.routers import (
+    auth,
+    categories,
+    listings,
+    messages,
+    notifications,
+    orders,
+    profiles,
+    uploads,
+)
 from .config import settings
 
 app = FastAPI(
@@ -25,6 +37,11 @@ app.include_router(profiles.router)
 app.include_router(orders.router)
 app.include_router(messages.router)
 app.include_router(notifications.router)
+app.include_router(uploads.router)
+
+_upload_dir = Path(settings.upload_dir).resolve()
+_upload_dir.mkdir(parents=True, exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(_upload_dir)), name="uploads")
 
 
 @app.get("/")

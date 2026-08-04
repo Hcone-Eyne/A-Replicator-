@@ -72,6 +72,26 @@ class OrderNotifier extends StateNotifier<OrderState> {
     }
   }
 
+  Future<OrderModel?> createOrder({
+    required String listingId,
+    String shippingAddress = '',
+    String paymentMethod = '',
+  }) async {
+    final result = await _repository.createOrder(
+      listingId: listingId,
+      shippingAddress: shippingAddress,
+      paymentMethod: paymentMethod,
+    );
+    if (!result.isSuccess) return null;
+
+    final created = result.data!;
+    final current = state.orders.valueOrNull ?? [];
+    state = state.copyWith(
+      orders: AsyncValue.data([created, ...current]),
+    );
+    return created;
+  }
+
   Future<void> cancelOrder(String orderId, {String? reason}) async {
     final result = await _repository.cancelOrder(id: orderId, reason: reason);
     if (result.isSuccess) {
