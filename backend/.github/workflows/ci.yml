@@ -9,6 +9,25 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:9
+        env:
+          MYSQL_DATABASE: flow_app
+          MYSQL_USER: flow_app
+          MYSQL_PASSWORD: flow_dev_password
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -u root -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      FLOW_DATABASE_URL: mysql+pymysql://flow_app:flow_dev_password@127.0.0.1:3306/flow_app
+
     steps:
       - uses: actions/checkout@v4
 
@@ -21,6 +40,12 @@ jobs:
         run: |
           pip install --upgrade pip
           pip install -e ".[dev]"
+
+      - name: Create schema and seed database
+        working-directory: backend
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -u flow_app -pflow_dev_password flow_app < db/schema.sql
+          mysql -h 127.0.0.1 -P 3306 -u flow_app -pflow_dev_password flow_app < db/seed.sql
 
       - name: Run tests
         working-directory: backend
