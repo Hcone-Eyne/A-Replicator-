@@ -50,10 +50,10 @@ INSERT INTO flow_orders (id, buyer_id, seller_id, listing_id, listing_title, lis
 ('ord_005', 'user_001', 'user_006', 'list_005', 'Bicicleta de Montaña Trek', '', 4200.00, 'NGN', 'cancelled', NOW() - INTERVAL 10 DAY,  'Av. Universidad 202, Queretaro',      '', FALSE, 1);
 
 -- Conversations (user_001 is user_a)
-INSERT INTO flow_conversations (id, user_a_id, user_b_id, last_message, last_message_time, unread_count, is_online, product_title, product_image, created_at) VALUES
-('conv_001', 'user_001', 'user_002', 'Si, esta disponible. Te lo puedo enviar manana.', NOW() - INTERVAL 15 MINUTE, 2, TRUE,  'iPhone 15 Pro Max 256GB', '', NOW() - INTERVAL 1 DAY),
-('conv_002', 'user_001', 'user_003', 'Gracias por la compra!',                         NOW() - INTERVAL 2 HOUR,   0, FALSE, 'Nike Air Max 90 Talla 10', '', NOW() - INTERVAL 2 DAY),
-('conv_003', 'user_001', 'user_004', 'Tiene algun descuento?',                         NOW() - INTERVAL 1 DAY,    1, TRUE,  'MacBook Air M2 13"',       '', NOW() - INTERVAL 1 DAY);
+INSERT INTO flow_conversations (id, user_a_id, user_b_id, last_message, last_message_time, user_a_unread, user_b_unread, is_online, product_title, product_image, created_at) VALUES
+('conv_001', 'user_001', 'user_002', 'Si, esta disponible. Te lo puedo enviar manana.', NOW() - INTERVAL 15 MINUTE, 2, 0, TRUE,  'iPhone 15 Pro Max 256GB', '', NOW() - INTERVAL 1 DAY),
+('conv_002', 'user_001', 'user_003', 'Gracias por la compra!',                         NOW() - INTERVAL 2 HOUR,   0, 0, FALSE, 'Nike Air Max 90 Talla 10', '', NOW() - INTERVAL 2 DAY),
+('conv_003', 'user_001', 'user_004', 'Tiene algun descuento?',                         NOW() - INTERVAL 1 DAY,    1, 0, TRUE,  'MacBook Air M2 13"',       '', NOW() - INTERVAL 1 DAY);
 
 -- Messages
 INSERT INTO flow_messages (id, conversation_id, sender_id, text, image_url, timestamp, is_read) VALUES

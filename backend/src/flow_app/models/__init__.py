@@ -163,7 +163,8 @@ class Conversation(Base):
     user_b_id: Mapped[str] = mapped_column(ForeignKey("flow_users.id"))
     last_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     last_message_time: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
-    unread_count: Mapped[int] = mapped_column(Integer, default=0)
+    user_a_unread: Mapped[int] = mapped_column(Integer, default=0)
+    user_b_unread: Mapped[int] = mapped_column(Integer, default=0)
     is_online: Mapped[bool] = mapped_column(Boolean, default=False)
     product_title: Mapped[str] = mapped_column(String(255), default="")
     product_image: Mapped[str] = mapped_column(String(1024), default="")
@@ -184,6 +185,9 @@ class Message(Base):
 
 class Review(Base):
     __tablename__ = "flow_reviews"
+    __table_args__ = (
+        UniqueConstraint("seller_id", "reviewer_id", name="uq_reviews_seller_reviewer"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     seller_id: Mapped[str] = mapped_column(ForeignKey("flow_users.id"))

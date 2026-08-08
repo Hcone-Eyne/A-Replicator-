@@ -1,3 +1,4 @@
+import logging
 import re
 import secrets
 import time
@@ -46,6 +47,8 @@ from ..schemas import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+logger = logging.getLogger("flow_app.auth")
 
 
 def _new_id(prefix: str) -> str:
@@ -244,6 +247,9 @@ def refresh(body: RefreshRequest, db: Session = Depends(get_db)):
     if user is None:
         db.rollback()
         raise HTTPException(status_code=401, detail="Invalid or expired refresh token")
+    if user.status == "suspended":
+        db.rollback()
+        raise HTTPException(status_code=403, detail="Account is suspended")
 
     refresh_token = generate_refresh_token()
     create_refresh_session(db, user.id, refresh_token, replaced_by=session.id)
@@ -361,6 +367,7 @@ def send_otp(body: OtpSendRequest, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Phone number is required")
 
     code = generate_otp()
+    logger.info("[dev-otp] Phone %s: code %s", body.phone, code)
     db.add(
         OtpCode(
             id=_new_id("otp"),

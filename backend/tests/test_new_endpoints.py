@@ -152,7 +152,8 @@ def test_send_message_updates_unread_count(client, clean_db):
     assert r.status_code == 201
     convs = client.get("/conversations").json()
     updated = next(c for c in convs if c["id"] == conv_id)
-    assert updated["unreadCount"] == 1
+    assert updated["unreadCount"] == 0
+    assert client.post(f"/conversations/{conv_id}/read").json()["ok"] is True
 
 
 def test_create_review(client, clean_db):

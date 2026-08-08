@@ -171,7 +171,12 @@ def serialize_order(order) -> dict:
     }
 
 
-def serialize_conversation(conversation, other: User) -> dict:
+def serialize_conversation(conversation, other: User, reader_id: str) -> dict:
+    unread = (
+        conversation.user_a_unread
+        if conversation.user_a_id == reader_id
+        else conversation.user_b_unread
+    )
     return {
         "id": conversation.id,
         "otherUserId": other.id,
@@ -181,7 +186,7 @@ def serialize_conversation(conversation, other: User) -> dict:
         "otherUserAvatarColorHex": avatar_color(other.id),
         "lastMessage": conversation.last_message or "",
         "lastMessageTime": conversation.last_message_time.isoformat(),
-        "unreadCount": conversation.unread_count,
+        "unreadCount": unread,
         "isOnline": to_bool(conversation.is_online),
         "isVerified": to_bool(other.is_verified),
         "productTitle": conversation.product_title,

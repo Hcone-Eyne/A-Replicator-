@@ -1,12 +1,10 @@
-import time
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import and_, func, or_, select
 from sqlalchemy.orm import Session
 
 from ...core.database import get_db
 from ...core.security import get_current_user
-from ...core.services import create_notification
+from ...core.services import create_notification, generate_id
 from ...models import Conversation, Listing, Message, User
 from ..schemas import ConversationCreateRequest, MessageSendRequest
 from ..serializers import serialize_conversation, serialize_message
@@ -20,6 +18,14 @@ def _other_user(db: Session, conv: Conversation, user_id: str) -> User:
     if not other:
         raise HTTPException(status_code=404, detail="Other user not found")
     return other
+
+
+def _bump_other_unread(conv: Conversation, sender_id: str) -> None:
+    """Increment unread for the participant that did not send the message."""
+    if conv.user_a_id == sender_id:
+        conv.user_b_unread += 1
+    else:
+        conv.user_a_unread += 1
 
 
 def _require_participant(conv: Conversation, user_id: str) -> None:
@@ -71,12 +77,13 @@ def create_conversation(
     conv = _existing_conversation(db, user_id, body.otherUserId)
     if not conv:
         conv = Conversation(
-            id=f"conv_{int(time.time() * 1000)}",
+            id=generate_id("conv"),
             user_a_id=user_id,
             user_b_id=body.otherUserId,
             last_message=body.initialMessage,
             last_message_time=func.now(),
-            unread_count=0,
+            user_a_unread=0,
+            user_b_unread=0,
             is_online=False,
             product_title=product_title,
             product_image=product_image,
@@ -86,7 +93,7 @@ def create_conversation(
 
     if body.initialMessage:
         message = Message(
-            id=f"msg_{int(time.time() * 1000)}",
+            id=generate_id("msg"),
             conversation_id=conv.id,
             sender_id=user_id,
             text=body.initialMessage,
@@ -95,6 +102,7 @@ def create_conversation(
         db.add(message)
         conv.last_message = body.initialMessage
         conv.last_message_time = func.now()
+        _bump_other_unread(conv, user_id)
         create_notification(
             db,
             user_id=body.otherUserId,
@@ -106,7 +114,7 @@ def create_conversation(
 
     db.commit()
     db.refresh(conv)
-    return serialize_conversation(conv, other)
+    return serialize_conversation(conv, other, user_id)
 
 
 @router.get("/conversations")
@@ -120,7 +128,7 @@ def get_conversations(
         .where(or_(Conversation.user_a_id == user_id, Conversation.user_b_id == user_id))
         .order_by(Conversation.last_message_time.desc())
     ).all()
-    return [serialize_conversation(c, _other_user(db, c, user_id)) for c in rows]
+    return [serialize_conversation(c, _other_user(db, c, user_id), user_id) for c in rows]
 
 
 @router.get("/conversations/{conv_id}/messages")
@@ -158,7 +166,7 @@ def send_message(
 
     sender_id = current_user.id
     message = Message(
-        id=f"msg_{int(time.time() * 1000)}",
+        id=generate_id("msg"),
         conversation_id=conv_id,
         sender_id=sender_id,
         text=body.text,
@@ -169,17 +177,16 @@ def send_message(
     conv.last_message_time = func.now()
 
     other_id = conv.user_b_id if conv.user_a_id == sender_id else conv.user_a_id
-    if other_id != sender_id:
-        conv.unread_count += 1
-        other = db.get(User, other_id)
-        create_notification(
-            db,
-            user_id=other_id,
-            title="New Message",
-            body=f"{current_user.name} sent you a message." if other else "You have a new message.",
-            type="message",
-            data={"conversationId": conv.id},
-        )
+    _bump_other_unread(conv, sender_id)
+    other = db.get(User, other_id)
+    create_notification(
+        db,
+        user_id=other_id,
+        title="New Message",
+        body=f"{current_user.name} sent you a message." if other else "You have a new message.",
+        type="message",
+        data={"conversationId": conv.id},
+    )
     db.commit()
     db.refresh(message)
     return serialize_message(message)
@@ -205,7 +212,10 @@ def mark_conversation_read(
         )
     ).all():
         message.is_read = True
-    conv.unread_count = 0
+    if conv.user_a_id == user_id:
+        conv.user_a_unread = 0
+    else:
+        conv.user_b_unread = 0
     db.commit()
     return {"ok": True}
 
@@ -216,9 +226,14 @@ def get_conversations_unread_count(
     current_user: User = Depends(get_current_user),
 ):
     user_id = current_user.id
-    total = db.scalar(
-        select(func.coalesce(func.sum(Conversation.unread_count), 0)).where(
-            or_(Conversation.user_a_id == user_id, Conversation.user_b_id == user_id)
+    total_a = db.scalar(
+        select(func.coalesce(func.sum(Conversation.user_a_unread), 0)).where(
+            Conversation.user_a_id == user_id
         )
     )
-    return {"count": int(total)}
+    total_b = db.scalar(
+        select(func.coalesce(func.sum(Conversation.user_b_unread), 0)).where(
+            Conversation.user_b_id == user_id
+        )
+    )
+    return {"count": int(total_a or 0) + int(total_b or 0)}

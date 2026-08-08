@@ -49,6 +49,10 @@ def clean_db():
         "user_ids": set(db.scalars(select(User.id)).all()),
         "orders": set(db.scalars(select(Order.id)).all()),
         "conversations": set(db.scalars(select(Conversation.id)).all()),
+        "conversation_unread": {
+            c.id: (c.user_a_unread, c.user_b_unread)
+            for c in db.scalars(select(Conversation)).all()
+        },
         "messages": set(db.scalars(select(Message.id)).all()),
         "notifications": set(db.scalars(select(Notification.id)).all()),
         "reviews": set(db.scalars(select(Review.id)).all()),
@@ -105,6 +109,11 @@ def clean_db():
             if listing and (listing.status, listing.favorite_count) != (status, favorite_count):
                 listing.status = status
                 listing.favorite_count = favorite_count
+        for cid, (a_unread, b_unread) in baseline["conversation_unread"].items():
+            conv = db.get(Conversation, cid)
+            if conv and (conv.user_a_unread, conv.user_b_unread) != (a_unread, b_unread):
+                conv.user_a_unread = a_unread
+                conv.user_b_unread = b_unread
         for uid, (rating, reviews_count, role) in baseline["users"].items():
             user = db.get(User, uid)
             if user and (

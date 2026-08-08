@@ -148,10 +148,9 @@ class ResetPasswordRequest(BaseModel):
 
 
 class ListingCreateRequest(BaseModel):
-    sellerId: str | None = None
-    title: str = ""
+    title: str = Field(min_length=1)
     description: str = ""
-    price: float = 0.0
+    price: float = Field(ge=0)
     images: list[str] = []
     category: str = ""
     subcategory: str = ""
@@ -162,7 +161,7 @@ class ListingCreateRequest(BaseModel):
 class ListingUpdateRequest(BaseModel):
     title: str | None = None
     description: str | None = None
-    price: float | None = None
+    price: float | None = Field(default=None, ge=0)
     images: list[str] | None = None
     category: str | None = None
     subcategory: str | None = None
@@ -180,6 +179,12 @@ class ProfileUpdateRequest(BaseModel):
 class MessageSendRequest(BaseModel):
     text: str = ""
     imageUrl: str = ""
+
+    @model_validator(mode="after")
+    def require_content(self) -> "MessageSendRequest":
+        if not self.text.strip() and not self.imageUrl.strip():
+            raise ValueError("Provide message text or an image")
+        return self
 
 
 class OrderCancelRequest(BaseModel):

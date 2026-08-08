@@ -1,5 +1,4 @@
-from datetime import datetime, timedelta
-import time
+from datetime import timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import or_, select
@@ -7,12 +6,15 @@ from sqlalchemy.orm import Session
 
 from ...core.database import get_db
 from ...core.security import get_current_user
-from ...core.services import create_notification
+from ...core.services import create_notification, generate_id
 from ...models import Listing, Order, User
 from ..schemas import OrderCancelRequest, OrderCreateRequest
 from ..serializers import pagination, serialize_order
 
 router = APIRouter(tags=["orders"])
+
+# Payment method strings that mean payment is collected on delivery.
+_CASH_METHODS = {"", "cod", "cash", "cash on delivery", "cash_on_delivery"}
 
 
 def _buyer_or_seller(order: Order, user: User) -> None:
@@ -36,7 +38,7 @@ def create_order(
         raise HTTPException(status_code=400, detail="Cannot buy your own listing")
 
     order = Order(
-        id=f"ord_{int(time.time() * 1000)}",
+        id=generate_id("ord"),
         buyer_id=current_user.id,
         seller_id=listing.seller_id,
         listing_id=listing.id,
@@ -47,7 +49,7 @@ def create_order(
         status="pending",
         shipping_address=body.shippingAddress,
         payment_method=body.paymentMethod,
-        is_paid=bool(body.paymentMethod),
+        is_paid=body.paymentMethod.strip().lower() not in _CASH_METHODS,
         quantity=body.quantity,
     )
     db.add(order)
@@ -125,9 +127,14 @@ def cancel_order(
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
     _buyer_or_seller(order, current_user)
+    if order.status == "cancelled":
+        raise HTTPException(status_code=400, detail="Order already cancelled")
     if order.status == "delivered":
         raise HTTPException(status_code=400, detail="Cannot cancel a delivered order")
     order.status = "cancelled"
+    listing = db.get(Listing, order.listing_id)
+    if listing and listing.status == "reserved":
+        listing.status = "active"
     create_notification(
         db,
         user_id=order.seller_id if order.buyer_id == current_user.id else order.buyer_id,
@@ -153,13 +160,26 @@ def track_order(
     _buyer_or_seller(order, current_user)
 
     created = order.created_at
+    tracking = [{"status": "Order placed", "date": created.isoformat()}]
+    if order.is_paid:
+        tracking.append({"status": "Payment confirmed", "date": created.isoformat()})
+    else:
+        tracking.append({"status": "Payment pending", "date": created.isoformat()})
+    if order.status in ("confirmed", "shipped", "delivered"):
+        tracking.append({"status": "Seller confirmed", "date": (created + timedelta(hours=12)).isoformat()})
+    if order.status in ("shipped", "delivered"):
+        tracking.append({"status": "Shipped", "date": (created + timedelta(days=1)).isoformat()})
+    if order.status == "delivered":
+        tracking.append({"status": "Delivered", "date": (created + timedelta(days=2)).isoformat()})
+    if order.status == "cancelled":
+        tracking.append({"status": "Cancelled", "date": created.isoformat()})
+
+    estimated_delivery = None
+    if order.status in ("pending", "confirmed", "shipped"):
+        estimated_delivery = (created + timedelta(days=5)).isoformat()
     return {
         "orderId": order.id,
         "status": order.status,
-        "tracking": [
-            {"status": "Order placed", "date": created.isoformat()},
-            {"status": "Payment confirmed", "date": (created + timedelta(hours=1)).isoformat()},
-            {"status": "Shipped", "date": (created + timedelta(days=1)).isoformat()},
-        ],
-        "estimatedDelivery": (datetime.now() + timedelta(days=3)).isoformat(),
+        "tracking": tracking,
+        "estimatedDelivery": estimated_delivery,
     }

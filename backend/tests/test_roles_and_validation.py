@@ -110,6 +110,45 @@ class TestConversationValidation:
         )
         assert r.status_code == 403
 
+    def test_unread_counts_are_per_participant(self, client, clean_db):
+        reg_a = _register(client, email="alice@example.com").json()
+        reg_b = _register(client, email="bob@example.com").json()
+        a_id = reg_a["user"]["id"]
+        b_id = reg_b["user"]["id"]
+
+        conv = client.post(
+            "/conversations",
+            json={"otherUserId": b_id, "initialMessage": "Hi Bob"},
+            headers=_auth(reg_a),
+        ).json()
+        conv_id = conv["id"]
+        assert conv["unreadCount"] == 0
+
+        convs_a = client.get("/conversations", headers=_auth(reg_a)).json()
+        assert next(c for c in convs_a if c["id"] == conv_id)["unreadCount"] == 0
+        convs_b = client.get("/conversations", headers=_auth(reg_b)).json()
+        assert next(c for c in convs_b if c["id"] == conv_id)["unreadCount"] == 1
+
+        assert client.get("/conversations/unread-count", headers=_auth(reg_b)).json()[
+            "count"
+        ] == 1
+
+        assert (
+            client.post(f"/conversations/{conv_id}/read", headers=_auth(reg_b)).json()[
+                "ok"
+            ]
+            is True
+        )
+        convs_b = client.get("/conversations", headers=_auth(reg_b)).json()
+        assert next(c for c in convs_b if c["id"] == conv_id)["unreadCount"] == 0
+
+        client.post(
+            f"/conversations/{conv_id}/messages", json={"text": "Hey Alice"},
+            headers=_auth(reg_b),
+        )
+        convs_a = client.get("/conversations", headers=_auth(reg_a)).json()
+        assert next(c for c in convs_a if c["id"] == conv_id)["unreadCount"] == 1
+
 
 class TestNotificationTriggers:
     def test_follow_notifies_followee(self, client, clean_db):

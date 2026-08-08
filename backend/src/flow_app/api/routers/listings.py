@@ -1,12 +1,10 @@
-import time
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from ...core.database import get_db
 from ...core.security import SELLER_ROLE, get_current_user
-from ...core.services import create_notification
+from ...core.services import create_notification, generate_id
 from ...models import Favorite, Listing, User, UserFollow
 from ..schemas import ListingCreateRequest, ListingUpdateRequest
 from ..serializers import pagination, serialize_listing
@@ -38,7 +36,7 @@ def get_listings(
     sellerId: str | None = None,
     db: Session = Depends(get_db),
 ):
-    query = select(Listing)
+    query = select(Listing).where(Listing.status != "archived")
     if sellerId:
         query = query.where(Listing.seller_id == sellerId)
     else:
@@ -134,10 +132,9 @@ def create_listing(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    seller_id = body.sellerId or current_user.id
     listing = Listing(
-        id=f"list_{int(time.time() * 1000)}",
-        seller_id=seller_id,
+        id=generate_id("list"),
+        seller_id=current_user.id,
         title=body.title,
         description=body.description,
         price=body.price,
@@ -151,24 +148,19 @@ def create_listing(
     )
     db.add(listing)
 
-    if seller_id == current_user.id and current_user.role != SELLER_ROLE:
+    if current_user.role != SELLER_ROLE:
         current_user.role = SELLER_ROLE
         db.flush()
 
-    seller_name = current_user.name
-    if seller_id != current_user.id:
-        seller = db.get(User, seller_id)
-        seller_name = seller.name if seller else seller_name
-
     follower_ids = db.scalars(
-        select(UserFollow.follower_id).where(UserFollow.followee_id == seller_id)
+        select(UserFollow.follower_id).where(UserFollow.followee_id == current_user.id)
     ).all()
     for follower_id in follower_ids:
         create_notification(
             db,
             user_id=follower_id,
             title="New Listing",
-            body=f"{seller_name} just posted {body.title}.",
+            body=f"{current_user.name} just posted {body.title}.",
             type="listing",
             data={"listingId": listing.id},
         )
@@ -214,7 +206,9 @@ def delete_listing(
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
     _owner_or_admin(listing, current_user)
-    db.delete(listing)
+    if listing.status == "archived":
+        raise HTTPException(status_code=400, detail="Listing already archived")
+    listing.status = "archived"
     db.commit()
     return {"ok": True}
 

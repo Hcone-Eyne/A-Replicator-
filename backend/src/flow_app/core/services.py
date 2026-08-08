@@ -9,6 +9,11 @@ from ..api import serializers
 from ..models import Favorite, Listing, Notification, User, UserFollow
 
 
+def generate_id(prefix: str) -> str:
+    """Create a collision-resistant id for a record (ms timestamp + random suffix)."""
+    return f"{prefix}_{int(time.time() * 1000)}_{secrets.token_hex(3)}"
+
+
 def create_notification(
     db: Session,
     user_id: str,

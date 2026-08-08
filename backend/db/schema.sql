@@ -137,7 +137,8 @@ CREATE TABLE IF NOT EXISTS flow_conversations (
     user_b_id          VARCHAR(64)   NOT NULL,
     last_message       TEXT          NULL,
     last_message_time  DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    unread_count       INT           NOT NULL DEFAULT 0,
+    user_a_unread      INT           NOT NULL DEFAULT 0,
+    user_b_unread      INT           NOT NULL DEFAULT 0,
     is_online          BOOLEAN       NOT NULL DEFAULT FALSE,
     product_title      VARCHAR(255)  NOT NULL DEFAULT '',
     product_image      VARCHAR(1024) NOT NULL DEFAULT '',
@@ -174,7 +175,8 @@ CREATE TABLE IF NOT EXISTS flow_reviews (
     has_photo   BOOLEAN       NOT NULL DEFAULT FALSE,
     photo_url   VARCHAR(1024) NOT NULL DEFAULT '',
     CONSTRAINT fk_reviews_seller FOREIGN KEY (seller_id) REFERENCES flow_users(id) ON DELETE CASCADE,
-    INDEX idx_reviews_seller (seller_id)
+    INDEX idx_reviews_seller (seller_id),
+    UNIQUE KEY uq_reviews_seller_reviewer (seller_id, reviewer_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS flow_notifications (

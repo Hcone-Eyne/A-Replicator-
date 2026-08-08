@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from ...core.database import get_db
 from ...core.security import get_current_user
-from ...core.services import create_notification, user_payload
+from ...core.services import create_notification, generate_id, user_payload
 from ...models import Listing, Order, Review, User, UserFollow
 from ..schemas import ProfileUpdateRequest, ReviewCreateRequest
 from ..serializers import serialize_review, serialize_seller
@@ -28,9 +28,10 @@ def update_profile(
 ):
     user = current_user
     updates = body.model_dump(exclude_unset=True)
+    field_map = {"avatarUrl": "avatar_url"}
     for key, value in updates.items():
         if value is not None:
-            setattr(user, key, value)
+            setattr(user, field_map.get(key, key), value)
     db.commit()
     db.refresh(user)
     return user_payload(db, user, user.id)
@@ -126,8 +127,6 @@ def create_review(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    import time
-
     seller = db.get(User, seller_id)
     if not seller:
         raise HTTPException(status_code=404, detail="Seller not found")
@@ -146,7 +145,7 @@ def create_review(
         raise HTTPException(status_code=400, detail="You have already reviewed this seller")
 
     review = Review(
-        id=f"rev_{int(time.time() * 1000)}",
+        id=generate_id("rev"),
         seller_id=seller_id,
         reviewer_id=current_user.id,
         user_name=current_user.name,
@@ -165,8 +164,15 @@ def create_review(
     count = db.scalar(
         select(func.count()).select_from(Review).where(Review.seller_id == seller_id)
     )
+    positive_count = db.scalar(
+        select(func.count()).select_from(Review).where(
+            Review.seller_id == seller_id,
+            Review.rating >= 4,
+        )
+    )
     seller.rating = float(avg) or 0
     seller.reviews_count = int(count or 0)
+    seller.positive_percent = round((positive_count or 0) * 100 / max(int(count or 0), 1), 2)
     create_notification(
         db,
         user_id=seller_id,
