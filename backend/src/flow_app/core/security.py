@@ -191,12 +191,13 @@ def get_current_user(
     """Resolve the authenticated user.
 
     A valid Bearer token wins. Without a header the acting user falls back to
-    ``settings.current_user_id`` (existing impersonation behaviour). A present but
-    invalid token is rejected with 401 so real credentials are always honoured.
-    Non-active accounts (e.g. suspended) are rejected with 403.
+    ``settings.current_user_id`` (existing impersonation behaviour) when
+    ``FLOW_IMPERSONATION_ENABLED`` is true. A present but invalid token is
+    rejected with 401 so real credentials are always honoured. Non-active
+    accounts (e.g. suspended) are rejected with 403.
     """
     user = _user_from_authorization(db, authorization)
-    if user is None and authorization is None:
+    if user is None and authorization is None and settings.impersonation_enabled:
         user = db.get(User, settings.current_user_id)
     if user is None:
         raise HTTPException(
@@ -225,3 +226,25 @@ def get_authenticated_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     return _active_or_raise(user)
+
+
+USER_ROLE = "user"
+SELLER_ROLE = "seller"
+ADMIN_ROLE = "admin"
+ALL_ROLES = (USER_ROLE, SELLER_ROLE, ADMIN_ROLE)
+
+
+def require_roles(*roles: str):
+    """Dependency factory for role-gated endpoints.
+
+    Builds on :func:`get_authenticated_user`, so a valid Bearer token is always
+    required — the impersonated ``current_user_id`` never satisfies a role gate.
+    The acting user must hold one of the passed roles.
+    """
+
+    def _dependency(user: User = Depends(get_authenticated_user)) -> User:
+        if user.role not in roles:
+            raise HTTPException(status_code=403, detail="Insufficient permissions")
+        return user
+
+    return _dependency

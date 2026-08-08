@@ -29,6 +29,7 @@ class User(Base):
     phone: Mapped[str] = mapped_column(String(32), default="")
     password_hash: Mapped[str] = mapped_column(String(255), default="")
     status: Mapped[str] = mapped_column(String(16), default="active")
+    role: Mapped[str] = mapped_column(String(16), default="user")
     avatar_url: Mapped[str] = mapped_column(String(1024), default="")
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
     email_verify_code_hash: Mapped[str] = mapped_column(String(64), default="")

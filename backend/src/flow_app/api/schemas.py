@@ -188,7 +188,7 @@ class OrderCancelRequest(BaseModel):
 
 class OrderCreateRequest(BaseModel):
     listingId: str
-    quantity: int = 1
+    quantity: int = Field(default=1, ge=1)
     shippingAddress: str = ""
     paymentMethod: str = ""
 
@@ -206,3 +206,14 @@ class ReviewCreateRequest(BaseModel):
     text: str = ""
     hasPhoto: bool = False
     photoUrl: str = ""
+
+
+class RoleUpdateRequest(BaseModel):
+    role: str
+
+    @field_validator("role")
+    @classmethod
+    def validate_role(cls, value: str) -> str:
+        if value not in {"user", "seller", "admin"}:
+            raise ValueError("Role must be one of: user, seller, admin")
+        return value

@@ -1,4 +1,5 @@
 """Shared service helpers for routers."""
+import secrets
 import time
 
 from sqlalchemy import select
@@ -18,7 +19,7 @@ def create_notification(
 ) -> Notification:
     """Persist a notification for a user. Caller is responsible for commit."""
     notification = Notification(
-        id=f"notif_{int(time.time() * 1000)}",
+        id=f"notif_{int(time.time() * 1000)}_{secrets.token_hex(3)}",
         user_id=user_id,
         title=title,
         body=body,

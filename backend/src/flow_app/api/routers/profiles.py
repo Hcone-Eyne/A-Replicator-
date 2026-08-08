@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from ...config import settings
 from ...core.database import get_db
-from ...core.services import user_payload
+from ...core.security import get_current_user
+from ...core.services import create_notification, user_payload
 from ...models import Listing, Order, Review, User, UserFollow
 from ..schemas import ProfileUpdateRequest, ReviewCreateRequest
 from ..serializers import serialize_review, serialize_seller
@@ -13,28 +13,27 @@ router = APIRouter(tags=["profiles"])
 
 
 @router.get("/profile")
-def get_profile(db: Session = Depends(get_db)):
-    user_id = settings.current_user_id
-    user = db.get(User, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return user_payload(db, user, user_id)
+def get_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return user_payload(db, current_user, current_user.id)
 
 
 @router.put("/profile")
-def update_profile(body: ProfileUpdateRequest, db: Session = Depends(get_db)):
-    user_id = settings.current_user_id
-    user = db.get(User, user_id)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
+def update_profile(
+    body: ProfileUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    user = current_user
     updates = body.model_dump(exclude_unset=True)
     for key, value in updates.items():
         if value is not None:
             setattr(user, key, value)
     db.commit()
     db.refresh(user)
-    return user_payload(db, user, user_id)
+    return user_payload(db, user, user.id)
 
 
 @router.get("/sellers/{seller_id}")
@@ -63,18 +62,39 @@ def get_seller(seller_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/sellers/{seller_id}/follow")
-def follow_seller(seller_id: str, db: Session = Depends(get_db)):
-    user_id = settings.current_user_id
-    if not db.get(User, seller_id):
+def follow_seller(
+    seller_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    user_id = current_user.id
+    if user_id == seller_id:
+        raise HTTPException(status_code=400, detail="Cannot follow yourself")
+    followee = db.get(User, seller_id)
+    if not followee:
         raise HTTPException(status_code=404, detail="Seller not found")
-    db.merge(UserFollow(follower_id=user_id, followee_id=seller_id))
+    if db.get(UserFollow, (user_id, seller_id)):
+        return {"ok": True, "alreadyFollowing": True}
+    db.add(UserFollow(follower_id=user_id, followee_id=seller_id))
+    create_notification(
+        db,
+        user_id=seller_id,
+        title="New Follower",
+        body=f"{current_user.name} started following you.",
+        type="follow",
+        data={"userId": user_id},
+    )
     db.commit()
-    return {"ok": True}
+    return {"ok": True, "alreadyFollowing": False}
 
 
 @router.delete("/sellers/{seller_id}/follow")
-def unfollow_seller(seller_id: str, db: Session = Depends(get_db)):
-    user_id = settings.current_user_id
+def unfollow_seller(
+    seller_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    user_id = current_user.id
     row = db.get(UserFollow, (user_id, seller_id))
     if row:
         db.delete(row)
@@ -104,6 +124,7 @@ def create_review(
     seller_id: str,
     body: ReviewCreateRequest,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     import time
 
@@ -112,14 +133,24 @@ def create_review(
         raise HTTPException(status_code=404, detail="Seller not found")
     if not 1 <= body.rating <= 5:
         raise HTTPException(status_code=400, detail="Rating must be between 1 and 5")
+    if seller_id == current_user.id:
+        raise HTTPException(status_code=400, detail="Cannot review yourself")
 
-    reviewer = db.get(User, settings.current_user_id)
+    existing = db.scalar(
+        select(Review.id).where(
+            Review.seller_id == seller_id,
+            Review.reviewer_id == current_user.id,
+        )
+    )
+    if existing:
+        raise HTTPException(status_code=400, detail="You have already reviewed this seller")
+
     review = Review(
         id=f"rev_{int(time.time() * 1000)}",
         seller_id=seller_id,
-        reviewer_id=settings.current_user_id,
-        user_name=reviewer.name if reviewer else "",
-        user_avatar=reviewer.avatar_url if reviewer else "",
+        reviewer_id=current_user.id,
+        user_name=current_user.name,
+        user_avatar=current_user.avatar_url,
         rating=body.rating,
         text=body.text,
         has_photo=body.hasPhoto,
@@ -136,6 +167,14 @@ def create_review(
     )
     seller.rating = float(avg) or 0
     seller.reviews_count = int(count or 0)
+    create_notification(
+        db,
+        user_id=seller_id,
+        title="New Review",
+        body=f"{current_user.name} left you a {body.rating}-star review.",
+        type="review",
+        data={"reviewId": review.id},
+    )
     db.commit()
     db.refresh(review)
     return serialize_review(review)

@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
-from ...config import settings
 from ...core.database import get_db
-from ...models import Favorite, Listing
+from ...core.security import SELLER_ROLE, get_current_user
+from ...core.services import create_notification
+from ...models import Favorite, Listing, User, UserFollow
 from ..schemas import ListingCreateRequest, ListingUpdateRequest
 from ..serializers import pagination, serialize_listing
 
@@ -21,6 +22,11 @@ def _favorite_by(db: Session, listing_id: str) -> list[str]:
 
 def _listing_payload(db: Session, listing: Listing) -> dict:
     return serialize_listing(listing, favorite_by=_favorite_by(db, listing.id))
+
+
+def _owner_or_admin(listing: Listing, user: User) -> None:
+    if listing.seller_id != user.id and user.role != "admin":
+        raise HTTPException(status_code=403, detail="Not your listing")
 
 
 @router.get("/listings")
@@ -61,8 +67,9 @@ def get_my_listings(
     limit: int = Query(20, ge=1, le=100),
     status: str | None = None,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    query = select(Listing).where(Listing.seller_id == settings.current_user_id)
+    query = select(Listing).where(Listing.seller_id == current_user.id)
     if status:
         query = query.where(Listing.status == status)
     query = query.order_by(Listing.created_at.desc())
@@ -78,8 +85,9 @@ def get_wishlist(
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    user_id = settings.current_user_id
+    user_id = current_user.id
     query = (
         select(Listing)
         .join(Favorite, Favorite.listing_id == Listing.id)
@@ -121,10 +129,15 @@ def get_listing(listing_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/listings", status_code=201)
-def create_listing(body: ListingCreateRequest, db: Session = Depends(get_db)):
+def create_listing(
+    body: ListingCreateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    seller_id = body.sellerId or current_user.id
     listing = Listing(
         id=f"list_{int(time.time() * 1000)}",
-        seller_id=body.sellerId or settings.current_user_id,
+        seller_id=seller_id,
         title=body.title,
         description=body.description,
         price=body.price,
@@ -137,16 +150,45 @@ def create_listing(body: ListingCreateRequest, db: Session = Depends(get_db)):
         created_at=func.now(),
     )
     db.add(listing)
+
+    if seller_id == current_user.id and current_user.role != SELLER_ROLE:
+        current_user.role = SELLER_ROLE
+        db.flush()
+
+    seller_name = current_user.name
+    if seller_id != current_user.id:
+        seller = db.get(User, seller_id)
+        seller_name = seller.name if seller else seller_name
+
+    follower_ids = db.scalars(
+        select(UserFollow.follower_id).where(UserFollow.followee_id == seller_id)
+    ).all()
+    for follower_id in follower_ids:
+        create_notification(
+            db,
+            user_id=follower_id,
+            title="New Listing",
+            body=f"{seller_name} just posted {body.title}.",
+            type="listing",
+            data={"listingId": listing.id},
+        )
+
     db.commit()
     db.refresh(listing)
     return _listing_payload(db, listing)
 
 
 @router.put("/listings/{listing_id}")
-def update_listing(listing_id: str, body: ListingUpdateRequest, db: Session = Depends(get_db)):
+def update_listing(
+    listing_id: str,
+    body: ListingUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     listing = db.get(Listing, listing_id)
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
+    _owner_or_admin(listing, current_user)
 
     updates = body.model_dump(exclude_unset=True)
     field_map = {
@@ -163,22 +205,31 @@ def update_listing(listing_id: str, body: ListingUpdateRequest, db: Session = De
 
 
 @router.delete("/listings/{listing_id}")
-def delete_listing(listing_id: str, db: Session = Depends(get_db)):
+def delete_listing(
+    listing_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     listing = db.get(Listing, listing_id)
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
+    _owner_or_admin(listing, current_user)
     db.delete(listing)
     db.commit()
     return {"ok": True}
 
 
 @router.post("/listings/{listing_id}/favorite")
-def toggle_favorite(listing_id: str, db: Session = Depends(get_db)):
+def toggle_favorite(
+    listing_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     listing = db.get(Listing, listing_id)
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
 
-    user_id = settings.current_user_id
+    user_id = current_user.id
     existing = db.get(Favorite, (user_id, listing_id))
     if existing:
         db.delete(existing)
@@ -186,6 +237,15 @@ def toggle_favorite(listing_id: str, db: Session = Depends(get_db)):
     else:
         db.add(Favorite(user_id=user_id, listing_id=listing_id))
         favorited = True
+        if listing.seller_id != user_id:
+            create_notification(
+                db,
+                user_id=listing.seller_id,
+                title="New Favorite",
+                body=f"{current_user.name} saved your listing {listing.title}.",
+                type="favorite",
+                data={"listingId": listing_id},
+            )
 
     db.flush()
     favorite_count = db.scalar(

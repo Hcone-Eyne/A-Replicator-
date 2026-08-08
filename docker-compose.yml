@@ -1,0 +1,68 @@
+# Flow App deployment stack: MySQL + FastAPI backend.
+#
+# Bring up the full stack:
+#   docker compose up -d --build
+#
+# The MySQL container initialises the schema and demo seed data on first boot
+# (db/schema.sql + db/seed.sql mounted into /docker-entrypoint-initdb.d).
+# For an existing database, apply db/schema.sql once and then each file in
+# db/migrations/ in order instead.
+#
+# Production notes:
+#   - Set a strong FLOW_JWT_SECRET_KEY and flip FLOW_IMPERSONATION_ENABLED=false
+#     so every request must present a Bearer token.
+#   - Configure real Google client ids and SMTP credentials.
+
+services:
+  db:
+    image: mysql:9
+    container_name: flow-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: flow_app
+      MYSQL_USER: flow_app
+      MYSQL_PASSWORD: flow_dev_password
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./backend/db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./backend/db/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    container_name: flow-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      FLOW_DATABASE_URL: mysql+pymysql://flow_app:flow_dev_password@db:3306/flow_app
+      FLOW_CURRENT_USER_ID: user_001
+      FLOW_IMPERSONATION_ENABLED: ${FLOW_IMPERSONATION_ENABLED:-true}
+      FLOW_CORS_ORIGINS: ${FLOW_CORS_ORIGINS:-*}
+      FLOW_JWT_SECRET_KEY: ${FLOW_JWT_SECRET_KEY:-change-me-to-a-long-random-string}
+      FLOW_JWT_ALGORITHM: HS256
+      FLOW_ACCESS_TOKEN_EXPIRE_MINUTES: ${FLOW_ACCESS_TOKEN_EXPIRE_MINUTES:-60}
+      FLOW_REFRESH_TOKEN_EXPIRE_DAYS: ${FLOW_REFRESH_TOKEN_EXPIRE_DAYS:-30}
+      FLOW_GOOGLE_CLIENT_ID: ${FLOW_GOOGLE_CLIENT_ID:-}
+      FLOW_GOOGLE_ALLOW_UNVERIFIED: ${FLOW_GOOGLE_ALLOW_UNVERIFIED:-true}
+      FLOW_SMTP_HOST: ${FLOW_SMTP_HOST:-}
+      FLOW_SMTP_PORT: ${FLOW_SMTP_PORT:-587}
+      FLOW_SMTP_USER: ${FLOW_SMTP_USER:-}
+      FLOW_SMTP_PASSWORD: ${FLOW_SMTP_PASSWORD:-}
+      FLOW_SMTP_FROM: ${FLOW_SMTP_FROM:-Flow App <no-reply@flow.local>}
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads:/app/backend/uploads
+
+volumes:
+  db_data:
+  uploads:

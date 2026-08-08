@@ -73,6 +73,7 @@ def serialize_user(
         "avatarUrl": user.avatar_url,
         "isVerified": to_bool(user.is_verified),
         "location": user.location,
+        "role": user.role or "user",
         "rating": to_float(user.rating),
         "reviewsCount": user.reviews_count,
         "listingsCount": user.listings_count,

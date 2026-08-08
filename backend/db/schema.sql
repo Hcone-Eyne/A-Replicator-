@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS flow_users (
     phone           VARCHAR(32)  NOT NULL DEFAULT '',
     password_hash   VARCHAR(255) NOT NULL DEFAULT '',
     status          VARCHAR(16)  NOT NULL DEFAULT 'active',
+    role            VARCHAR(16)  NOT NULL DEFAULT 'user',
     avatar_url      VARCHAR(1024) NOT NULL DEFAULT '',
     is_verified     BOOLEAN      NOT NULL DEFAULT FALSE,
     email_verify_code_hash  VARCHAR(64) NOT NULL DEFAULT '',

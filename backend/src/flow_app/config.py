@@ -15,6 +15,9 @@ class Settings(BaseSettings):
 
     database_url: str = "mysql+pymysql://flow_app:flow_dev_password@localhost:3306/flow_app"
     current_user_id: str = "user_001"
+    # When true (dev default), requests without a Bearer token act as
+    # current_user_id. Disable in production so every request needs credentials.
+    impersonation_enabled: bool = True
     cors_origins: str = "*"
     upload_dir: str = "backend/uploads"
 
