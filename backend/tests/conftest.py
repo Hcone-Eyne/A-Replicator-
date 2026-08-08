@@ -14,6 +14,9 @@ from flow_app.models import (
     Message,
     Notification,
     Order,
+    OtpCode,
+    PasswordResetToken,
+    RefreshToken,
     Review,
     User,
 )
@@ -42,12 +45,16 @@ def clean_db():
         "users": {
             u.id: (u.rating, u.reviews_count) for u in db.scalars(select(User)).all()
         },
+        "user_ids": set(db.scalars(select(User.id)).all()),
         "orders": set(db.scalars(select(Order.id)).all()),
         "conversations": set(db.scalars(select(Conversation.id)).all()),
         "messages": set(db.scalars(select(Message.id)).all()),
         "notifications": set(db.scalars(select(Notification.id)).all()),
         "reviews": set(db.scalars(select(Review.id)).all()),
         "favorites": {(f.user_id, f.listing_id) for f in db.scalars(select(Favorite)).all()},
+        "refresh_tokens": set(db.scalars(select(RefreshToken.id)).all()),
+        "password_resets": set(db.scalars(select(PasswordResetToken.id)).all()),
+        "otp_codes": set(db.scalars(select(OtpCode.id)).all()),
     }
     upload_dir = Path(settings.upload_dir).resolve()
     baseline_files = set(upload_dir.iterdir()) if upload_dir.exists() else set()
@@ -73,6 +80,15 @@ def clean_db():
             )
         if baseline["orders"]:
             db.execute(delete(Order).where(Order.id.not_in(baseline["orders"])))
+        for rt in db.scalars(select(RefreshToken)).all():
+            if rt.id not in baseline["refresh_tokens"]:
+                db.delete(rt)
+        for prt in db.scalars(select(PasswordResetToken)).all():
+            if prt.id not in baseline["password_resets"]:
+                db.delete(prt)
+        for otp in db.scalars(select(OtpCode)).all():
+            if otp.id not in baseline["otp_codes"]:
+                db.delete(otp)
         for fav in db.scalars(select(Favorite)).all():
             if (fav.user_id, fav.listing_id) not in baseline["favorites"]:
                 db.delete(fav)
@@ -88,6 +104,8 @@ def clean_db():
                 user.reviews_count = reviews_count
         for lid in set(db.scalars(select(Listing.id)).all()) - baseline["listing_ids"]:
             db.delete(db.get(Listing, lid))
+        for uid in set(db.scalars(select(User.id)).all()) - baseline["user_ids"]:
+            db.delete(db.get(User, uid))
         db.commit()
         for file in set(upload_dir.iterdir()) - baseline_files if upload_dir.exists() else []:
             file.unlink()

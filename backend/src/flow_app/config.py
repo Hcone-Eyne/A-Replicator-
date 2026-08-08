@@ -18,5 +18,38 @@ class Settings(BaseSettings):
     cors_origins: str = "*"
     upload_dir: str = "backend/uploads"
 
+    jwt_secret_key: str = "flow-dev-secret-key-change-me-in-production"
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60
+    refresh_token_expire_days: int = 30
+    reset_token_expire_minutes: int = 60
+    otp_expire_minutes: int = 10
+    email_verify_expire_minutes: int = 10
+
+    # Google Sign-In. Comma-separated list of accepted OAuth2 client ids:
+    # include the Web client id (used by the web app and as the Android
+    # serverClientId), the iOS client id, and the Android client id if the
+    # Android app does not set a serverClientId.
+    # While it is empty, id tokens are trusted in dev (claims decoded unverified),
+    # so the Google flow works without real Google credentials.
+    google_client_id: str = ""
+    google_allow_unverified: bool = True
+
+    @property
+    def google_client_ids(self) -> list[str]:
+        return [
+            cid.strip()
+            for cid in self.google_client_id.split(",")
+            if cid.strip()
+        ]
+
+    # Email delivery. When smtp_host is empty, outgoing email is logged to the
+    # console (dev mode) instead of being sent.
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "Flow App <no-reply@flow.local>"
+
 
 settings = Settings()

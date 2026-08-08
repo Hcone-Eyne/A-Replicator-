@@ -6,6 +6,10 @@ import 'api_config.dart';
 class ApiClient {
   ApiClient._();
 
+  /// Injected by the auth notifier after login/session restore so every
+  /// request carries the Bearer token.
+  static String? accessToken;
+
   static final Dio dio = Dio(
     BaseOptions(
       baseUrl: ApiConfig.baseUrl,
@@ -14,7 +18,17 @@ class ApiClient {
       sendTimeout: const Duration(seconds: 15),
       headers: {'Content-Type': 'application/json'},
     ),
-  );
+  )..interceptors.add(
+      InterceptorsWrapper(
+        onRequest: (options, handler) {
+          final token = accessToken;
+          if (token != null && token.isNotEmpty) {
+            options.headers['Authorization'] = 'Bearer $token';
+          }
+          handler.next(options);
+        },
+      ),
+    );
 
   /// Normalizes a Dio failure into a readable error message.
   static String messageOf(Object error) {

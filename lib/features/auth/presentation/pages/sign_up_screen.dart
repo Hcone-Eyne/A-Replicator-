@@ -340,9 +340,16 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                 final email = _emailController.text.trim();
                                 final password = _passwordController.text;
                                 await ref.read(authProvider.notifier).register(name, email, password);
-                                if (mounted && ref.read(authProvider).isAuthenticated) {
-                                  // ignore: use_build_context_synchronously
-                                  context.goNamed(RouteNames.nHome);
+                                if (!context.mounted) return;
+                                if (ref.read(authProvider).isAuthenticated) {
+                                  if (ref.read(authProvider).isVerificationRequired) {
+                                    context.goNamed(
+                                      RouteNames.nOtpVerification,
+                                      queryParameters: {'email': email},
+                                    );
+                                  } else {
+                                    context.goNamed(RouteNames.nHome);
+                                  }
                                 }
                               }
                             },

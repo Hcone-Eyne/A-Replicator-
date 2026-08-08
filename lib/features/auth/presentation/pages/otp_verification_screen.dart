@@ -8,7 +8,10 @@ import '../../../../core/router/route_names.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
 class OtpVerificationScreen extends ConsumerStatefulWidget {
-  const OtpVerificationScreen({super.key});
+  const OtpVerificationScreen({super.key, this.email});
+
+  /// Email the code was sent to (used only for display).
+  final String? email;
 
   @override
   ConsumerState<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
@@ -57,7 +60,7 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
   void _onResend() {
     if (_resendEnabled) {
       _startTimer();
-      ref.read(authProvider.notifier).sendOtp('');
+      ref.read(authProvider.notifier).sendEmailVerification();
     }
   }
 
@@ -65,16 +68,16 @@ class _OtpVerificationScreenState extends ConsumerState<OtpVerificationScreen> {
     final code = _controllers.map((c) => c.text).join();
     if (code.length != 6) return;
 
-    final success = await ref.read(authProvider.notifier).verifyOtp('', code);
+    final success = await ref.read(authProvider.notifier).verifyEmail(code);
     if (!mounted) return;
     if (success) {
-      context.goNamed(RouteNames.nSecurityVerification);
+      context.goNamed(RouteNames.nHome);
     } else {
       final error = ref.read(authProvider).error;
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(error ?? 'Invalid OTP code'),
+            content: Text(error ?? 'Invalid verification code'),
             backgroundColor: AppColors.error,
           ),
         );

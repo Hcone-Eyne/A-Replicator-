@@ -11,11 +11,18 @@ class ApiConfig {
   /// Base URL of the FastAPI backend, resolved per platform.
   static String get baseUrl {
     if (kIsWeb) {
-      return 'http://localhost:8000';
+      return 'http://localhost:4000';
     }
     if (defaultTargetPlatform == TargetPlatform.android) {
-      return 'http://10.0.2.2:8000';
+      return 'http://10.0.2.2:4000';
     }
-    return 'http://localhost:8000';
+    return 'http://localhost:4000';
   }
+
+  /// Google OAuth2 Web client id.
+  ///
+  /// Used as the `clientId` on web and as the Android `serverClientId`.
+  /// Fill this in from Google Cloud Console → APIs & Services → Credentials
+  /// → OAuth 2.0 Client IDs → your "Web application" client.
+  static const String googleWebClientId = 'YOUR_WEB_CLIENT_ID';
 }

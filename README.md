@@ -42,10 +42,10 @@ brew services start mysql
 python -m flow_app.utils.seed_db
 python3 -m venv .venv && source .venv/bin/activate
 pip install ".[dev]"
-uvicorn flow_app.main:app --reload --port 8000
+uvicorn flow_app.main:app --reload --port 4000
 ```
 
-API docs: http://localhost:8000/docs
+API docs: http://localhost:4000/docs
 
 ## Database
 

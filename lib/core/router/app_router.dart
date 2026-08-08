@@ -118,7 +118,9 @@ class AppRouter {
         name: 'otpVerification',
         pageBuilder: (context, state) => _buildPage(
           state: state,
-          child: const OtpVerificationScreen(),
+          child: OtpVerificationScreen(
+            email: state.uri.queryParameters['email'],
+          ),
         ),
       ),
       GoRoute(

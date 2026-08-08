@@ -2,13 +2,13 @@
 -- Ported from Mock*Repository classes (lib/features/*/data/repositories)
 
 -- Users
-INSERT INTO flow_users (id, name, email, phone, avatar_url, is_verified, location, rating, reviews_count, listings_count, sales_count, bio, member_duration, positive_percent, created_at) VALUES
-('user_001', 'Carlos Mendoza', 'carlos@example.com', '+52 55 1234 5678', '', TRUE, 'Ciudad de Mexico, Mexico', 4.9, 3, 12, 48, '', '', 0.00, NOW() - INTERVAL 2 YEAR),
-('user_002', 'Maria Lopez',    'maria@example.com',    '+52 33 1111 2222', '', TRUE,  'Guadalajara, Mexico',      4.8, 3, 24, 95,  'Vendedor profesional de electrónicos. Envío a todo el país.', '2 years', 98.50, NOW() - INTERVAL 2 YEAR),
-('user_003', 'Juan Perez',     'juan@example.com',     '+52 81 3333 4444', '', FALSE, 'Monterrey, Mexico',        4.2, 1, 15, 32,  'Ropa y calzado deportivo de marca.',                          '1 year',  92.00, NOW() - INTERVAL 1 YEAR),
-('user_004', 'Ana Garcia',     'ana@example.com',      '+52 22 5555 6666', '', TRUE,  'Puebla, Mexico',           4.9, 2, 32, 128, 'Apple products specialist. Certified reseller.',               '3 years', 99.20, NOW() - INTERVAL 3 YEAR),
-('user_005', 'Pedro Sanchez',  'pedro@example.com',    '+52 44 7777 8888', '', FALSE, 'Puebla, Mexico',           4.5, 0, 8,  21,  'Muebles y hogar.',                                             '8 months', 95.00, NOW() - INTERVAL 8 MONTH),
-('user_006', 'Laura Torres',   'laura@example.com',    '+52 44 9999 0000', '', FALSE, 'Queretaro, Mexico',        4.6, 0, 5,  15,  'Deportes y aire libre.',                                       '1 year',  94.00, NOW() - INTERVAL 1 YEAR);
+INSERT INTO flow_users (id, username, name, email, phone, avatar_url, is_verified, location, rating, reviews_count, listings_count, sales_count, bio, member_duration, positive_percent, created_at) VALUES
+('user_001', 'carlos',     'Carlos Mendoza', 'carlos@example.com', '+52 55 1234 5678', '', TRUE,  'Ciudad de Mexico, Mexico', 4.9, 3, 12, 48, '', '', 0.00, NOW() - INTERVAL 2 YEAR),
+('user_002', 'maria',      'Maria Lopez',    'maria@example.com',    '+52 33 1111 2222', '', TRUE,  'Guadalajara, Mexico',      4.8, 3, 24, 95,  'Vendedor profesional de electrónicos. Envío a todo el país.', '2 years', 98.50, NOW() - INTERVAL 2 YEAR),
+('user_003', 'juan',       'Juan Perez',     'juan@example.com',     '+52 81 3333 4444', '', FALSE, 'Monterrey, Mexico',        4.2, 1, 15, 32,  'Ropa y calzado deportivo de marca.',                          '1 year',  92.00, NOW() - INTERVAL 1 YEAR),
+('user_004', 'ana',        'Ana Garcia',     'ana@example.com',      '+52 22 5555 6666', '', TRUE,  'Puebla, Mexico',           4.9, 2, 32, 128, 'Apple products specialist. Certified reseller.',               '3 years', 99.20, NOW() - INTERVAL 3 YEAR),
+('user_005', 'pedro',      'Pedro Sanchez',  'pedro@example.com',    '+52 44 7777 8888', '', FALSE, 'Puebla, Mexico',           4.5, 0, 8,  21,  'Muebles y hogar.',                                             '8 months', 95.00, NOW() - INTERVAL 8 MONTH),
+('user_006', 'laura',      'Laura Torres',   'laura@example.com',    '+52 44 9999 0000', '', FALSE, 'Queretaro, Mexico',        4.6, 0, 5,  15,  'Deportes y aire libre.',                                       '1 year',  94.00, NOW() - INTERVAL 1 YEAR);
 
 -- Follows (user_001 follows user_005, user_006; followers are user_002/003/004)
 INSERT INTO flow_user_follows (follower_id, followee_id) VALUES

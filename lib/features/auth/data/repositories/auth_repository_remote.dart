@@ -1,12 +1,13 @@
 import '../../../../core/network/api_client.dart';
 import '../../../../core/network/api_repository.dart';
 import '../../../../shared/models/result.dart';
+import '../../data/models/auth_session.dart';
 import '../../data/models/user_model.dart';
 import '../repositories/auth_repository.dart';
 
 class AuthRemoteRepository extends ApiRepository implements AuthRepository {
   @override
-  Future<Result<UserModel>> login({
+  Future<Result<AuthSession>> login({
     required String email,
     required String password,
   }) {
@@ -15,12 +16,12 @@ class AuthRemoteRepository extends ApiRepository implements AuthRepository {
         '/auth/login',
         data: {'email': email, 'password': password},
       );
-      return UserModel.fromJson(response.data as Map<String, dynamic>);
+      return AuthSession.fromJson(response.data as Map<String, dynamic>);
     });
   }
 
   @override
-  Future<Result<UserModel>> register({
+  Future<Result<AuthSession>> register({
     required String name,
     required String email,
     required String phone,
@@ -31,13 +32,30 @@ class AuthRemoteRepository extends ApiRepository implements AuthRepository {
         '/auth/register',
         data: {'name': name, 'email': email, 'phone': phone, 'password': password},
       );
-      return UserModel.fromJson(response.data as Map<String, dynamic>);
+      return AuthSession.fromJson(response.data as Map<String, dynamic>);
     });
   }
 
   @override
-  Future<Result<void>> logout() {
-    return guardVoid(() => ApiClient.dio.post('/auth/logout'));
+  Future<Result<AuthSession>> signInWithGoogle({required String idToken}) {
+    return guard(() async {
+      final response = await ApiClient.dio.post(
+        '/auth/google',
+        data: {'idToken': idToken},
+      );
+      return AuthSession.fromJson(response.data as Map<String, dynamic>);
+    });
+  }
+
+  @override
+  Future<Result<AuthSession>> refreshSession({required String refreshToken}) {
+    return guard(() async {
+      final response = await ApiClient.dio.post(
+        '/auth/refresh',
+        data: {'refreshToken': refreshToken},
+      );
+      return AuthSession.fromJson(response.data as Map<String, dynamic>);
+    });
   }
 
   @override
@@ -46,6 +64,28 @@ class AuthRemoteRepository extends ApiRepository implements AuthRepository {
       final response = await ApiClient.dio.get('/auth/me');
       return UserModel.fromJson(response.data as Map<String, dynamic>);
     });
+  }
+
+  @override
+  Future<Result<void>> logout({required String refreshToken}) {
+    return guardVoid(
+      () => ApiClient.dio.post('/auth/logout', data: {'refreshToken': refreshToken}),
+    );
+  }
+
+  @override
+  Future<Result<void>> verifyEmail({required String code}) {
+    return guardVoid(
+      () => ApiClient.dio.post(
+        '/auth/email-verify/confirm',
+        data: {'code': code},
+      ),
+    );
+  }
+
+  @override
+  Future<Result<void>> sendEmailVerification() {
+    return guardVoid(() => ApiClient.dio.post('/auth/email-verify/send'));
   }
 
   @override
@@ -72,6 +112,20 @@ class AuthRemoteRepository extends ApiRepository implements AuthRepository {
       () => ApiClient.dio.post(
         '/auth/reset-password',
         data: {'email': email},
+      ),
+    );
+  }
+
+  @override
+  Future<Result<void>> completeResetPassword({
+    required String email,
+    required String token,
+    required String newPassword,
+  }) {
+    return guardVoid(
+      () => ApiClient.dio.post(
+        '/auth/reset-password',
+        data: {'email': email, 'token': token, 'newPassword': newPassword},
       ),
     );
   }

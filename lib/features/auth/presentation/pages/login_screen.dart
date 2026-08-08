@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/router/route_names.dart';
 import '../../../../features/auth/presentation/providers/auth_provider.dart';
@@ -27,6 +26,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  void _navigateAfterAuth(String email) {
+    final authState = ref.read(authProvider);
+    if (authState.isVerificationRequired) {
+      context.goNamed(
+        RouteNames.nOtpVerification,
+        queryParameters: {'email': email},
+      );
+    } else {
+      context.goNamed(RouteNames.nHome);
+    }
   }
 
   @override
@@ -260,7 +271,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                               final password = _passwordController.text;
                               await ref.read(authProvider.notifier).login(email, password);
                               if (mounted && ref.read(authProvider).isAuthenticated) {
-                                context.goNamed(RouteNames.nHome);
+                                _navigateAfterAuth(email);
                               }
                             }
                           },
@@ -331,12 +342,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   height: 56,
                   width: double.infinity,
                   child: OutlinedButton(
-                    onPressed: () async {
-                      final uri = Uri.parse('https://accounts.google.com');
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(uri, mode: LaunchMode.externalApplication);
-                      }
-                    },
+                    onPressed: ref.watch(authProvider).isLoading
+                        ? null
+                        : () async {
+                            final ok =
+                                await ref.read(authProvider.notifier).signInWithGoogle();
+                            if (mounted && ok && ref.read(authProvider).isAuthenticated) {
+                              final email =
+                                  ref.read(authProvider).user.valueOrNull?.email ?? '';
+                              _navigateAfterAuth(email);
+                            }
+                          },
                     style: OutlinedButton.styleFrom(
                       backgroundColor: AppColors.surfaceContainer,
                       foregroundColor: AppColors.onSurface,

@@ -75,6 +75,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     _loadingController.repeat();
 
     await Future.delayed(const Duration(milliseconds: 800));
+    await ref.read(authProvider.notifier).initialize();
+    if (!mounted) return;
     _navigateBasedOnAuth();
   }
 
@@ -82,7 +84,15 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     if (!mounted) return;
     final authState = ref.read(authProvider);
     if (authState.isAuthenticated) {
-      context.goNamed(RouteNames.nHome);
+      if (authState.isVerificationRequired) {
+        final email = authState.user.valueOrNull?.email ?? '';
+        context.goNamed(
+          RouteNames.nOtpVerification,
+          queryParameters: {'email': email},
+        );
+      } else {
+        context.goNamed(RouteNames.nHome);
+      }
     } else {
       context.goNamed(RouteNames.nLogin);
     }

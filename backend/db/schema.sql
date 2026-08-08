@@ -3,11 +3,17 @@
 
 CREATE TABLE IF NOT EXISTS flow_users (
     id              VARCHAR(64)  NOT NULL PRIMARY KEY,
+    username        VARCHAR(64)  NOT NULL UNIQUE,
     name            VARCHAR(255) NOT NULL,
     email           VARCHAR(255) NOT NULL UNIQUE,
+    auth_provider   VARCHAR(16)  NOT NULL DEFAULT 'email',
     phone           VARCHAR(32)  NOT NULL DEFAULT '',
+    password_hash   VARCHAR(255) NOT NULL DEFAULT '',
+    status          VARCHAR(16)  NOT NULL DEFAULT 'active',
     avatar_url      VARCHAR(1024) NOT NULL DEFAULT '',
     is_verified     BOOLEAN      NOT NULL DEFAULT FALSE,
+    email_verify_code_hash  VARCHAR(64) NOT NULL DEFAULT '',
+    email_verify_expires_at DATETIME     NULL,
     location        VARCHAR(255) NOT NULL DEFAULT '',
     rating          DECIMAL(3,2) NOT NULL DEFAULT 0.00,
     reviews_count   INT          NOT NULL DEFAULT 0,
@@ -16,7 +22,42 @@ CREATE TABLE IF NOT EXISTS flow_users (
     bio             TEXT         NULL,
     member_duration VARCHAR(64)  NOT NULL DEFAULT '',
     positive_percent DECIMAL(5,2) NOT NULL DEFAULT 0.00,
+    last_login_at   DATETIME     NULL,
+    updated_at      DATETIME     NULL,
     created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS flow_refresh_tokens (
+    id           VARCHAR(64)   NOT NULL PRIMARY KEY,
+    user_id      VARCHAR(64)   NOT NULL,
+    token_hash   VARCHAR(64)   NOT NULL UNIQUE,
+    expires_at   DATETIME      NOT NULL,
+    created_at   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked_at   DATETIME      NULL,
+    replaced_by  VARCHAR(64)   NULL,
+    CONSTRAINT fk_refresh_user FOREIGN KEY (user_id) REFERENCES flow_users(id) ON DELETE CASCADE,
+    INDEX idx_refresh_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS flow_password_resets (
+    id           VARCHAR(64)   NOT NULL PRIMARY KEY,
+    user_id      VARCHAR(64)   NOT NULL,
+    token_hash   VARCHAR(64)   NOT NULL UNIQUE,
+    expires_at   DATETIME      NOT NULL,
+    used_at      DATETIME      NULL,
+    created_at   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_reset_user FOREIGN KEY (user_id) REFERENCES flow_users(id) ON DELETE CASCADE,
+    INDEX idx_reset_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS flow_otp_codes (
+    id           VARCHAR(64)   NOT NULL PRIMARY KEY,
+    phone        VARCHAR(32)   NOT NULL,
+    code_hash    VARCHAR(64)   NOT NULL,
+    expires_at   DATETIME      NOT NULL,
+    attempts     INT           NOT NULL DEFAULT 0,
+    created_at   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_otp_phone (phone)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS flow_user_follows (

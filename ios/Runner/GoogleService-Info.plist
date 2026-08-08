@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  GoogleService-Info.plist PLACEHOLDER.
+
+  REPLACE THIS FILE with the one downloaded from Google Cloud Console:
+  Google Cloud Console -> APIs & Services -> Credentials -> your iOS OAuth
+  client -> "Download" -> iOS GoogleService-Info.plist.
+
+  Bundle identifier below must match the project's PRODUCT_BUNDLE_IDENTIFIER
+  (ios/Runner.xcodeproj) and the one registered for the OAuth client.
+-->
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>YOUR_IOS_CLIENT_ID.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.YOUR_IOS_CLIENT_ID</string>
+	<key>BUNDLE_ID</key>
+	<string>com.example.flowApp</string>
+	<key>PROJECT_ID</key>
+	<string>YOUR_GOOGLE_PROJECT</string>
+	<key>GCM_SENDER_ID</key>
+	<string>0</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>STORAGE_BUCKET</key>
+	<string></string>
+</dict>
+</plist>

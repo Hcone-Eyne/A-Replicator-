@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -15,6 +16,12 @@ from .api.routers import (
     uploads,
 )
 from .config import settings
+
+# Ensure app loggers (e.g. flow_app.mailer) reach the console even when
+# uvicorn manages its own loggers.
+if not logging.getLogger().handlers:
+    logging.basicConfig(level=logging.INFO)
+logging.getLogger("flow_app.mailer").setLevel(logging.INFO)
 
 app = FastAPI(
     title="Flow App API",

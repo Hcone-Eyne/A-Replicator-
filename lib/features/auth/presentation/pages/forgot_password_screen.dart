@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/router/route_names.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
@@ -15,43 +16,77 @@ class ForgotPasswordScreen extends ConsumerStatefulWidget {
 class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
+  final _codeController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _obscureNewPassword = true;
+  bool _obscureConfirmPassword = true;
   bool _showToast = false;
   String? _toastError;
+  bool _resetStep = false;
 
   @override
   void dispose() {
     _emailController.dispose();
+    _codeController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
+  void _showToastMessage(String message, {String? error}) {
+    setState(() {
+      _showToast = true;
+      _toastError = error;
+    });
+    Future.delayed(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() => _showToast = false);
+      }
+    });
+  }
+
   Future<void> _onSubmit() async {
-    if (_formKey.currentState!.validate()) {
-      final success = await ref.read(authProvider.notifier).resetPassword(
-            _emailController.text.trim(),
-          );
+    if (!_formKey.currentState!.validate()) return;
+    if (!mounted) return;
+
+    if (!_resetStep) {
+      final email = _emailController.text.trim();
+      final success = await ref.read(authProvider.notifier).resetPassword(email);
       if (!mounted) return;
       if (success) {
-        setState(() {
-          _showToast = true;
-          _toastError = null;
-        });
-        Future.delayed(const Duration(seconds: 4), () {
-          if (mounted) {
-            setState(() => _showToast = false);
-          }
-        });
+        setState(() => _resetStep = true);
+        _showToastMessage('Reset code sent. Check your email.');
       } else {
-        final error = ref.read(authProvider).error;
-        setState(() {
-          _showToast = true;
-          _toastError = error;
-        });
-        Future.delayed(const Duration(seconds: 4), () {
-          if (mounted) {
-            setState(() => _showToast = false);
-          }
-        });
+        _showToastMessage(
+          ref.read(authProvider).error ?? 'Something went wrong.',
+          error: ref.read(authProvider).error,
+        );
       }
+      return;
+    }
+
+    final email = _emailController.text.trim();
+    final code = _codeController.text.trim();
+    final newPassword = _newPasswordController.text;
+    final success = await ref.read(authProvider.notifier).completeResetPassword(
+          email: email,
+          token: code,
+          newPassword: newPassword,
+        );
+    if (!mounted) return;
+    if (success) {
+      _showToastMessage('Password reset successfully. You can now sign in.');
+      Future.delayed(const Duration(milliseconds: 1200), () {
+        if (mounted) {
+          context.goNamed(RouteNames.nLogin);
+        }
+      });
+    } else {
+      _showToastMessage(
+        ref.read(authProvider).error ?? 'Something went wrong.',
+        error: ref.read(authProvider).error,
+      );
     }
   }
 
@@ -140,7 +175,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Text(
-                          'Enter your email address and we will send you a link to reset your password.',
+                          _resetStep
+                              ? 'Enter the 6-digit code we emailed you and choose a new password.'
+                              : 'Enter your email address and we will send you a code to reset your password.',
                           style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w400,
@@ -221,6 +258,132 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                             ),
                             const SizedBox(height: 24),
 
+                            if (_resetStep) ...[
+                              // Reset code
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'RESET CODE',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    height: 16 / 12,
+                                    letterSpacing: 0.05,
+                                    color: AppColors.secondary,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _codeController,
+                                keyboardType: TextInputType.number,
+                                maxLength: 6,
+                                decoration: const InputDecoration(
+                                  hintText: '6-digit code',
+                                  counterText: '',
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().length != 6) {
+                                    return 'Enter the 6-digit code';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 20),
+
+                              // New password
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'NEW PASSWORD',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    height: 16 / 12,
+                                    letterSpacing: 0.05,
+                                    color: AppColors.secondary,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _newPasswordController,
+                                obscureText: _obscureNewPassword,
+                                decoration: InputDecoration(
+                                  hintText: '********',
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureNewPassword
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                      color: AppColors.outline,
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureNewPassword = !_obscureNewPassword;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.isEmpty) {
+                                    return 'Please enter a new password';
+                                  }
+                                  if (value.length < 8) {
+                                    return 'Min 8 characters';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 20),
+
+                              // Confirm new password
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  'CONFIRM PASSWORD',
+                                  style: GoogleFonts.inter(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    height: 16 / 12,
+                                    letterSpacing: 0.05,
+                                    color: AppColors.secondary,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _confirmPasswordController,
+                                obscureText: _obscureConfirmPassword,
+                                decoration: InputDecoration(
+                                  hintText: '********',
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureConfirmPassword
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                      color: AppColors.outline,
+                                      size: 20,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureConfirmPassword =
+                                            !_obscureConfirmPassword;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                validator: (value) {
+                                  if (value != _newPasswordController.text) {
+                                    return "Passwords don't match";
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 24),
+                            ],
+
                             // Send Reset Link Button
                             SizedBox(
                               height: 56,
@@ -253,7 +416,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                                         children: [
                                           Flexible(
                                             child: Text(
-                                              'Send Reset Link',
+                                              _resetStep
+                                                  ? 'Reset Password'
+                                                  : 'Send Reset Link',
                                               style: GoogleFonts.inter(
                                                 fontSize: 20,
                                                 fontWeight: FontWeight.w600,

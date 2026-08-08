@@ -22,11 +22,17 @@ class User(Base):
     __tablename__ = "flow_users"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    username: Mapped[str] = mapped_column(String(64), unique=True)
     name: Mapped[str] = mapped_column(String(255))
     email: Mapped[str] = mapped_column(String(255), unique=True)
+    auth_provider: Mapped[str] = mapped_column(String(16), default="email")
     phone: Mapped[str] = mapped_column(String(32), default="")
+    password_hash: Mapped[str] = mapped_column(String(255), default="")
+    status: Mapped[str] = mapped_column(String(16), default="active")
     avatar_url: Mapped[str] = mapped_column(String(1024), default="")
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False)
+    email_verify_code_hash: Mapped[str] = mapped_column(String(64), default="")
+    email_verify_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     location: Mapped[str] = mapped_column(String(255), default="")
     rating: Mapped[float] = mapped_column(Numeric(3, 2), default=0)
     reviews_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -35,6 +41,42 @@ class User(Base):
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
     member_duration: Mapped[str] = mapped_column(String(64), default="")
     positive_percent: Mapped[float] = mapped_column(Numeric(5, 2), default=0)
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class RefreshToken(Base):
+    __tablename__ = "flow_refresh_tokens"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("flow_users.id"))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    replaced_by: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+
+class PasswordResetToken(Base):
+    __tablename__ = "flow_password_resets"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("flow_users.id"))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class OtpCode(Base):
+    __tablename__ = "flow_otp_codes"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    phone: Mapped[str] = mapped_column(String(32))
+    code_hash: Mapped[str] = mapped_column(String(64))
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

@@ -43,10 +43,10 @@ pip install ".[dev]"
 cp .env.example .env   # adjust if needed
 
 # 5. Run
-uvicorn flow_app.main:app --reload --port 8000
+uvicorn flow_app.main:app --reload --port 4000
 ```
 
-API docs: http://localhost:8000/docs
+API docs: http://localhost:4000/docs
 
 ## Commands
 
@@ -70,4 +70,4 @@ pytest                                  # run the test suite
 
 - Response JSON keys match the Dart freezed models exactly (camelCase, ISO-8601 datetimes).
 - No auth tokens yet (planned). The "current user" defaults to `user_001` (`FLOW_CURRENT_USER_ID`).
-- Flutter app base URL: `http://localhost:8000` (Android emulator: `http://10.0.2.2:8000`).
+- Flutter app base URL: `http://localhost:4000` (Android emulator: `http://10.0.2.2:4000`).
